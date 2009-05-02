@@ -1,0 +1,120 @@
+{ john-program }
+
+start-world triples.
+
+;; CLASSES
+
+create Column number left right. 
+create Square col row contains arrows.
+create Player position goal-square opponent turn.
+create Direction.
+
+;; OBJECTS
+
+for [ "Down" name, "Right" name, "Up" name, "Left" name ] do make Direction each.
+for [ [ "A" name, 1, no, "B" ], [ "B" name, 2, "A", "C" ], [ "C" name, 3, "B", "D" ], [ "D" name, 4, "C", "E" ], [ "E" name, 5, "D", "F" ], [ "F" name, 6, "E", "G"], [ "G" name, 7, "F", "H" ], [ "H" name, 8, "G", no ] ] do make Column (each first) (each second) (each third) (each fourth).
+
+for all Column * [ 1, 2, 3, 4, 5, 6, 7, 8 ] do make Square (each first name + each second) (each first) (each second) none (3 random Direction).
+for [ A, H ] * [ 1, 8 ] do make Square (each first name + each second) (each first) (each second) none (all Direction).
+for [ D, E ] * [ 4, 5 ] do make Square (each first name + each second) (each first) (each second) block none.
+
+make Player White A1 H8 Black yes.
+make Player Black H1 A8 White no.
+
+;; QUALIFICATIONS (DYNAMIC PROPERTIES)
+
+qualify Square Up (its col name + (its row + 1)) object if its row < 8.
+qualify Square Down (its col name + (its row - 1)) object if its row > 1.
+qualify Square Right (its col right + its row) object if its col number < 8.
+qualify Square Left (its col left + its row) object if its col number > 1.
+
+rel-qualify Player can-go Direction if not its position (Direction name) = no and
+	    	  	 	       its position (Direction name) contains = none and
+				       Direction in its opponent position arrows.
+
+qualify Player moves select all Direction by it can-go which.
+qualify Player stuck if its turn = yes and its moves size = 0.
+qualify Player goal-distance (its position col number - its goal-square col number) abs +
+	      		     (its position row - its goal-square row ) abs.
+
+;; ACTIONS
+
+action Player move Direction 
+       consequence its position contains = none and 
+       		   its position = its position (Direction name) and
+		   its position contains = it and
+		   its turn = no and
+		   its opponent turn = yes.
+
+rule Player move is its turn = yes.
+rule Player move is it can-go Direction.
+
+;; GOAL
+
+goal Player win try its position = its goal-square or its opponent stuck = yes. 
+heuristic Player win minimize its goal-distance.
+
+;; VISUALS
+
+create Board.
+create Row number.
+
+qualify Square graphic-1 "|    X   "  if its arrows = none.
+qualify Square graphic-1 "|    ^   "  if Up in its arrows.
+qualify Square graphic-1 "|        "  if not Up in its arrows.
+qualify Square graphic-2 "|    X   "  if its arrows = none.
+qualify Square graphic-2 "|   < >  " if Left in its arrows and Right in its arrows.
+qualify Square graphic-2 "|     >  " if not Left in its arrows and Right in its arrows.
+qualify Square graphic-2 "|   <    " if Left in its arrows and not Right in its arrows.
+qualify Square graphic-3 "|    X   "  if its arrows = none.
+qualify Square graphic-3 "|    V   "  if Down in its arrows.
+qualify Square graphic-3 "|        "  if not Down in its arrows.
+qualify Square graphic-4 "|    W   " if White position = it.
+qualify Square graphic-4 "|    B   " if Black position = it.
+qualify Square graphic-4 "|    X   " if its contains = block.
+qualify Square graphic-4 "|    WG  " if White goal-square = it.
+qualify Square graphic-4 "|    BG  " if Black goal-square = it.
+qualify Square graphic-4 "|        " if its contains = none.
+
+;qualify Row squares select all Square by which row = its number.
+qualify Row squares [ ("A" + its number) object, ("B" + its number) object, ("C" + its number) object, ("D" + its number) object, ("E" + its number) object, ("F" + its number) object, ("G" + its number) object, ("H" + its number) object ].
+
+for [ ["Row8" name, 8], ["Row7" name, 7], ["Row6" name, 6], ["Row5" name, 5], ["Row4" name, 4], ["Row3" name, 3], ["Row2" name, 2], ["Row1" name, 1] ] do make Row (each first) (each second).
+make Board Triples.
+
+visual Board at x 0 y 0 draw ("-" * 73) and
+	     for all Row do at x 1 y 0 draw each and
+	     at x 1 y 5 draw "A        B        C        D        E        F        G        H".
+
+visual Row for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-1) and
+       	       at x 0 y 0 draw "|" and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-2) and
+       	       at x 0 y 0 draw "| " (its number) and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-3) and
+       	       at x 0 y 0 draw "|" and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-4) and
+       	       at x 0 y 0 draw "|" and
+       	       at x 1 y 0 draw ("-" * 73).
+
+
+;; QUERIES	
+set-opt auto-draw Triples.
+set-opt two-player-game [ White, Black ].
+
+draw Triples.
+;time.
+;White position.
+;Black position.
+;white do move Left.
+;White do move Up.
+;Black do move.
+; done.
+
+end-world.

@@ -1,0 +1,63 @@
+{john-program}
+
+start-world sat.
+
+;; CLASSES
+create SAT-Solver cnf undecided-variables.
+create CNF clauses.
+create Clause literals.
+create Literal variable accepts.
+create Variable value.
+
+;; OBJECTS
+for [ "X1" name, "X2" name, "X3" name, "X4" name, "X5" name ] do make Variable each true.
+for all Variable * [ [ p, true ], [ n, false ] ] 
+    do make Literal (each first name + each second first) (each first) (each second second).
+
+/;
+  CNF:
+       -X1 + X3 + -X5
+       -X2 + -X4 + X5
+       -X1 + X2 + -X4
+       -X3 + X4 + -X5
+       X2 + X3 + -X4 + X5
+       -X2 + -X3
+;/
+
+make Clause A [ X1n, X3p, X5n ].
+make Clause B [ X2n, X4n, X5p ].
+make Clause C [ X1n, X2p, X4n ].
+make Clause D [ X3n, X4p, X5n ].
+make Clause E [ X2p, X3p, X4n, X5p ].
+make Clause F [ X2n, X3n ].
+
+make CNF MyCNF (all Clause).
+make SAT-Solver SAT MyCNF (all Variable).
+
+;; QUALIFICATIONS
+qualify Literal valid if its accepts = its variable value.
+qualify Clause valid if for any its literals do each valid = yes.
+qualify CNF satisfied if for every its clauses do each valid = yes.
+qualify CNF solution (all Variable) value if its satisfied = yes.
+qualify CNF solution [ ] if its satisfied = no.
+
+;; GOALS
+goal SAT-Solver solve try its cnf satisfied = yes.
+
+;; ACTIONS
+action SAT-Solver falsify-variable Variable consequence
+       Variable value = false and
+       its undecided-variables = its undecided-variables - Variable.
+
+rule SAT-Solver falsify-variable is its undecided-variables size > 0.
+
+action-optimization SAT-Solver falsify-variable 
+		    dynamically establish Variable = its undecided-variables first.
+
+
+;; QUERIES
+SAT cnf satisfied.
+SAT satisfy solve.
+all Variable.
+SAT cnf solution.
+end-world.

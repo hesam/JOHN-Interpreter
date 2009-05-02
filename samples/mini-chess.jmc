@@ -1,0 +1,331 @@
+{ john-program }
+
+start-world chess.
+
+;; CLASSES
+
+create Board.
+create Row number.
+create Column number left right.
+create Square col row contains.
+create Player opponent turn castlable.
+create Piece kind worth position color taken.
+
+;; OBJECTS
+
+;; Board
+make Board Chess.
+
+;; Rows:
+for [ ["Row8" name, 8], ["Row7" name, 7], ["Row6" name, 6], ["Row5" name, 5], ["Row4" name, 4], ["Row3" name, 3], ["Row2" name, 2], ["Row1" name, 1] ] do make Row (each first) (each second).
+
+; Columns:
+for [ [ "C" name, 3, "B", "D" ], [ "D" name, 4, "C", "E" ], [ "E" name, 5, "D", "F" ], [ "F" name, 6, "E", no ] ] do make Column (each first) (each second) (each third) (each fourth).
+
+; Players:
+make Player White Black yes yes.
+make Player Black White no yes.
+
+; Pieces:
+make Piece White-pawn-D pawn 1 D2 White no.
+make Piece White-pawn-E pawn 1 E2 White no.
+make Piece White-pawn-F pawn 1 F2 White no.
+make Piece White-king king 99 E1 White no.
+make Piece White-rook-A rook 5 D1 White no.
+make Piece White-knight-G knight 3 F1 White no.
+
+make Piece Black-pawn-D pawn 1 D7 Black no.
+make Piece Black-pawn-E pawn 1 E7 Black no.
+make Piece Black-pawn-F pawn 1 F7 Black no.
+make Piece Black-king king 99 E8 Black no.
+make Piece Black-rook-A rook 5 D8 Black no.
+make Piece Black-bishop-F bishop 3 F8 Black no.
+
+; Squares:
+;for all Column * [ 1, 2, 3, 4, 5, 6, 7, 8 ] do make Square (each first name + each second) (each first) (each second) none.
+make Square C1 C 1 none. make Square C2 C 2 none. make Square C3 C 3 none. make Square C4 C 4 none. make Square C5 C 5 none. make Square C6 C 6 none. make Square C7 C 7 none. make Square C8 C 8 none. 
+make Square D3 D 3 none. make Square D4 D 4 none. make Square D5 D 5 none. make Square D6 D 6 none. 
+make Square E3 E 3 none. make Square E4 E 4 none. make Square E5 E 5 none. make Square E6 E 6 none. 
+make Square F3 F 3 none. make Square F4 F 4 none. make Square F5 F 5 none. make Square F6 F 6 none. 
+
+make Square E1 E 1 White-king.
+make Square D1 D 1 White-rook-A.
+make Square F1 F 1 White-knight-G.
+make Square D2 D 2 White-pawn-D.
+make Square E2 E 2 White-pawn-E.
+make Square F2 F 2 White-pawn-F.
+
+make Square E8 E 8 Black-king.
+make Square D8 D 8 Black-rook-A.
+make Square F8 F 8 Black-bishop-F.
+make Square D7 D 7 Black-pawn-D.
+make Square E7 E 7 Black-pawn-E.
+make Square F7 F 7 Black-pawn-F.
+
+;; QUALIFICATIONS (DYNAMIC PROPERTIES)
+
+; [ general ]------------------------------------------------------------------------
+qualify Player moves select (its pieces position) * (its opponent-or-empty-squares) 
+	       		      	     by (which first) valid-move (which second).
+qualify Player pieces all its color no taken Piece.
+qualify Player centralized-pieces select its pieces by which position col in { D, E } and which position row in { 3, 4, 5, 6 }.
+qualify Player king (its name + "-king") object.
+qualify Player checked if its king attacked = yes.
+qualify Player check-mated if its checked = yes and its moves size = 0.
+qualify Piece moves select all Square by (its position) valid-move which.
+qualify Piece attacked if for any its color opponent pieces position do each valid-move (its position).
+; [ valid-move ]----------------------------------------------------------------------------
+rel-qualify Square:Sqr1 valid-move Square:Sqr2 if
+	    not Sqr1 contains = none and
+	    (Sqr2 contains = none or not Sqr2 contains color = Sqr1 contains color) and
+	    Sqr1 normal-move Sqr2 and
+	    upon (Sqr1 contains color) do move Sqr1 Sqr2 do Sqr2 contains color checked = no.
+;	     or (Sqr1 castling-move Sqr2).
+; [ normal-move ]------------------------------------------------------------------------
+rel-qualify Square:Sqr1 normal-move Square:Sqr2 if
+	      ( Sqr1 contains kind = pawn and Sqr1 pawn-move Sqr2 ) or
+	      ( Sqr1 contains kind = rook and Sqr1 rook-move Sqr2 ) or
+	      ( Sqr1 contains kind = knight and Sqr1 knight-move Sqr2 ) or
+	      ( Sqr1 contains kind = bishop and Sqr1 bishop-move Sqr2 ) or
+	      ( Sqr1 contains kind = queen and Sqr1 queen-move Sqr2 ) or
+	      ( Sqr1 contains kind = king and Sqr1 king-move Sqr2 ).
+; [ pawn-move ]------------------------------------------------------------------------------
+rel-qualify Square:Sqr1 pawn-move Square:Sqr2 if
+	    Sqr1 pawn-normal-move Sqr2 or 
+	    Sqr1 pawn-take-move Sqr2.
+rel-qualify Square:Sqr1 pawn-normal-move Square:Sqr2 if
+	    Sqr2 contains = none and
+	    (Sqr1 forward = Sqr2 or (Sqr1 forward contains = none and Sqr2 pawn-double-move Sqr1)).
+rel-qualify Square:Sqr1 pawn-take-move Square:Sqr2 if
+	    not Sqr2 contains = none and 
+	    not Sqr2 contains color = Sqr1 contains color and
+            Sqr2 one-diagonal-up Sqr1.
+; [ rook-move ]------------------------------------------------------------------------------
+rel-qualify Square:Sqr1 rook-move Square:Sqr2 if
+	    Sqr1 straight-col-open Sqr2 or 
+            Sqr1 straight-row-open Sqr2.
+; [ knight-move ]------------------------------------------------------------------------------
+rel-qualify Square:Sqr1 knight-move Square:Sqr2 if
+	    ((Sqr1 row - Sqr2 row) in { 2, -2 } and (Sqr1 col number - Sqr2 col number) in { 1, -1 }) or
+	    ((Sqr1 row - Sqr2 row) in { 1, -1 } and (Sqr1 col number - Sqr2 col number) in { 2, -2 }).
+; [ bishop-move ]------------------------------------------------------------------------------
+rel-qualify Square:Sqr1 bishop-move Square:Sqr2 if
+	  Sqr1 diagonal-up-right-open Sqr2 or
+	  Sqr1 diagonal-up-left-open Sqr2.
+; [ queen-move ]------------------------------------------------------------------------------
+rel-qualify Square:Sqr1 queen-move Square:Sqr2 if Sqr1 rook-move Sqr2 or 
+                                                  Sqr1 bishop-move Sqr2.
+; [ king-move ]------------------------------------------------------------------------------
+rel-qualify Square:Sqr1 king-move Square:Sqr2 if
+	    (Sqr1 col = Sqr2 col and Sqr1 row - Sqr2 row in { 1, -1 }) or
+	    (Sqr1 row = Sqr2 row and Sqr1 col number - Sqr2 col number in { 1, -1 }) or
+	    (Sqr1 row - Sqr2 row in { 1, -1 } and Sqr1 col number - Sqr2 col number in { 1, -1}).
+; [ castling-move ]------------------------------------------------------------------------
+;rel-qualify Square:Sqr1 castling-move Square:Sqr2 if
+;	    Sqr1 contains color castlable = yes and
+;	    Sqr1 contains kind = king and
+;	    Sqr2 contains = none and
+;	    ( ( Sqr1 contains color = White and ( (Sqr2 = g1 and White-rook-H position = h1) or 
+;	      	     	      	      	    	  (Sqr2 = b1 and White-rook-A position = a1) ) ) or
+;              ( Sqr1 contains color = Black and ( (Sqr2 = g8 and Black-rook-H position = h8) or 
+;	      	     	      	      	    	  (Sqr2 = b8 and Black-rook-A position = a8) ) ) ) and
+;	    Sqr1 straight-row-open Sqr2.
+; [ helpers... ]------------------------------------------------------------------------------
+qualify Player opponent-or-empty-squares its opponent pieces position + all none contains Square.
+qualify Row squares [ ("C" + its number) object, ("D" + its number) object, ("E" + its number) object, ("F" + its number) object ].
+qualify Column squares [ (its name + 1) object, (its name + 2) object, (its name + 3) object, (its name + 4) object, (its name + 5) object, (its name + 6) object, (its name + 7) object, (its name + 8) object ].
+qualify Number squares ("Row" + it) object squares.
+qualify Square contains-white if not its contains = none and its contains color = White.
+qualify Square contains-black if not its contains = none and its contains color = Black.
+qualify Square next-row its row + 1 if its contains-white = yes and its row < 8.
+qualify Square next-row its row - 1 if its contains-black = yes and its row > 1.
+qualify Square two-next-row its row + 2 if its contains-white = yes and its contains position row = 2.
+qualify Square two-next-row its row - 2 if its contains-black = yes and its contains position row = 7.
+qualify Square up (its col name + (its row + 1)) object if its row < 8.
+qualify Square right (its col right + its row) object if not its col = F.
+qualify Square up-right (its col right + (its row + 1)) object if its row < 8 and not its col = F.
+qualify Square up-left (its col left + (its row + 1)) object if its row < 8 and not its col = C.
+qualify Square forward (its col name + its next-row) object if its next-row isNumber.
+qualify Square forward-right (its right-col-name + its next-row) object if its next-row isNumber and not its right-col-name = no.
+qualify Square forward-left (its left-col-name + its next-row) object if its next-row isNumber and not its left-col-name = no.
+qualify Square right-col-name its col right if its contains-white = yes.
+qualify Square right-col-name its col left if its contains-black = yes.
+qualify Square left-col-name its col left if its contains-white = yes.
+qualify Square left-col-name its col right if its contains-black = yes.
+rel-qualify Square:Sqr2 pawn-double-move Square:Sqr1 if Sqr1 two-next-row isNumber and 
+                                                        Sqr2 = (Sqr1 col name + Sqr1 two-next-row) object.
+rel-qualify Square:Sqr1 straight-col-open Square:Sqr2 if
+            Sqr1 col = Sqr2 col and 
+            (Sqr1 up-open Sqr2 or Sqr2 up-open Sqr1).
+rel-qualify Square:Sqr1 straight-row-open Square:Sqr2 if
+            Sqr1 row = Sqr2 row and 
+            (Sqr1 right-open Sqr2 or Sqr2 right-open Sqr1).
+rel-qualify Square:Sqr1 diagonal-up-right-open Square:Sqr2 if
+            Sqr1 row - Sqr2 row = Sqr1 col number - Sqr2 col number and
+            (Sqr1 up-right-open Sqr2 or Sqr2 up-right-open Sqr1).
+rel-qualify Square:Sqr1 diagonal-up-left-open Square:Sqr2 if
+            Sqr1 row - Sqr2 row = Sqr2 col number - Sqr1 col number and
+            (Sqr1 up-left-open Sqr2 or Sqr2 up-left-open Sqr1).
+rel-qualify Square:Sqr2 one-diagonal-up Square:Sqr1 if
+            Sqr1 forward-left = Sqr2 or 
+            Sqr1 forward-right = Sqr2.
+rel-qualify Square:Sqr1 up-open Square:Sqr2 if
+            Sqr1 up = Sqr2 or
+            (not Sqr1 up = no and Sqr1 up contains = none and (Sqr1 up) up-open Sqr2).
+rel-qualify Square:Sqr1 right-open Square:Sqr2 if
+            Sqr1 right = Sqr2 or
+            (not Sqr1 right = no and Sqr1 right contains = none and (Sqr1 right) right-open Sqr2).
+rel-qualify Square:Sqr1 up-right-open Square:Sqr2 if
+            Sqr1 up-right = Sqr2 or
+            (not Sqr1 up-right = no and Sqr1 up-right contains = none and (Sqr1 up-right) up-right-open Sqr2).
+rel-qualify Square:Sqr1 up-left-open Square:Sqr2 if
+            Sqr1 up-left = Sqr2 or
+            (not Sqr1 up-left = no and Sqr1 up-left contains = none and (Sqr1 up-left) up-left-open Sqr2).
+rel-qualify Square:A in-chess-move-span Square:B if 
+	    A row = B row or
+            A col = B col or
+            A col number - B col number = A row - B row or
+            A col number - B col number = B row - A row or
+            A knight-move B.
+; given king position upon castling, tell me...
+;qualify Square rook-castle-new-position one from select all Square by which row = its row and which col number = its col number - 1 if its col = g.
+;qualify Square rook-castle-new-position one from select all Square by which row = its row and which col number = its col number + 1 if its col = b.
+;qualify Square rook-castle-old-position one from select all Square by which row = its row and which col number = its col number + 1 if its col = g.
+;qualify Square rook-castle-old-position one from select all Square by which row = its row and which col number = its col number - 1 if its col = b.
+;qualify Square corresponding-rook its rook-castle-old-position contains.
+
+;; ACTIONS
+
+action Player move Square:From Square:To consequence
+       its turn = no and
+       its opponent turn = yes and
+       From contains kind = queen if (From contains kind = pawn and To row in { 1, 8 }) and
+       its castlable = no if (its castlable = yes and From contains kind = king) and
+       From contains position = To and
+       To contains taken = yes if not To contains = none and
+       To contains = From contains and
+;       To rook-castle-new-position contains = To corresponding-rook if (From contains kind = king and not From col number - To col number in { 0, 1, -1 }) and
+;       To corresponding-rook position contains = none if (From contains kind = king and not From col number - To col number in { 0, 1, -1 }) and
+;       To corresponding-rook position = To rook-castle-new-position if (From contains kind = king and not From col number - To col number in { 0, 1, -1 }) and
+       From contains = none.
+
+rule Player move is its turn = yes.
+rule Player move is not From contains = none.
+rule Player move is From contains color = it.
+rule Player move is From valid-move To.
+
+;; GOALS
+
+goal Player win try its opponent check-mated = yes.
+
+;; HEURISTICS
+
+heuristic Player win 1000 maximize its pieces worth sum.
+heuristic Player win 1000 minimize its opponent pieces worth sum.
+heuristic Player win 1 maximize its centralized-pieces size.
+
+;; OPTIMIZATIONS
+
+;; static:
+action-optimization Player move statically establish From in-chess-move-span To.
+
+;; dynamic:
+;action-optimization Player move dynamically establish From in its pieces position.
+;action-optimization Player move dynamically establish [ From, To ] in its moves.
+;action-optimization Player move dynamically use its moves.
+
+;; VISUALS
+
+qualify Number is-odd if it % 2 = 1.
+qualify Square is-white if (its row is-odd = yes and its col number is-odd = no) or 
+	       	     	   (its row is-odd = no and its col number is-odd = yes).
+qualify Square egb "|           " if it is-white = yes.
+qualify Square egb "|. . . . . ." if it is-white = no.
+qualify Square egs "  " if it is-white = yes.
+qualify Square egs ". " if it is-white = no.
+qualify Square egm "   " if it is-white = yes.
+qualify Square egm ". ." if it is-white = no.
+qualify Square graphic-1 its egb if its contains = none or (its contains color = White and its contains kind in { pawn, rook, knight, bishop }).
+qualify Square graphic-1 "|" + (its egs * 2) + " + " + (its egs * 2) if its contains color = White and its contains kind = king. 
+qualify Square graphic-1  "|" + (its egm) + " -.- "  + (its egm) if its contains color = White and its contains kind = queen.
+qualify Square graphic-1  "|" + (its egs) + " {===} "  + (its egs) if its contains color = Black.
+qualify Square graphic-2 its egb if its contains = none or (its contains color = White and its contains kind in { pawn, rook, knight }).
+qualify Square graphic-2  "|" + (its egm) + " ( ) "  + (its egm) if its contains color = White and its contains kind in { king, queen}. 
+qualify Square graphic-2  "|" + (its egs * 2) + " , "  + (its egs * 2) if its contains color = White and its contains kind = bishop.
+
+qualify Square graphic-2 "|" + (its egm) + " (=) "  + (its egm) if its contains color = Black and its contains kind = pawn.
+qualify Square graphic-2 "|" + (its egm) + " |=| "  + (its egm) if its contains color = Black and its contains kind in { rook, king, queen }.
+qualify Square graphic-2 "|" + (its egm) + " \=/ "  + (its egm) if its contains color = Black and its contains kind = bishop.
+;qualify Square graphic-2 "|" + (its egm) + " |\) "  + (its egm) if its contains = Black-knight-B.
+;qualify Square graphic-2 "|" + (its egm) + " (/| "  + (its egm) if its contains = Black-knight-G.
+qualify Square graphic-3 its egb if its contains = none or its contains kind = pawn.
+qualify Square graphic-3 "|" + (its egs) +  " [UuU] " + (its egs) if its contains kind = rook.
+;qualify Square graphic-3 "|" + (its egm) + " T\ " + (its egs * 2) if its contains = White-knight-B.
+qualify Square graphic-3 "|" + (its egm) + " (^) " + (its egm) if its contains color = White and its contains kind = bishop.
+qualify Square graphic-3 "|" + (its egm) + " / \ " + (its egm) if its contains color = White and its contains kind in { king, queen }.
+qualify Square graphic-3 "|" + (its egs * 2) + " /T " + (its egm) if its contains = White-knight-G.
+
+;qualify Square graphic-3 "|" + (its egm) + " |/ " + (its egs * 2) if its contains = Black-knight-B.
+qualify Square graphic-3 "|" + (its egm) + " (v) " + (its egm) if its contains color = Black and its contains kind = bishop.
+qualify Square graphic-3 "|" + (its egm) + " \=/ " + (its egm) if its contains color = Black and its contains kind in { king, queen }.
+;qualify Square graphic-3 "|" + (its egs * 2) + " \| " + (its egm) if its contains = Black-knight-G.
+qualify Square graphic-4 its egb if its contains = none.
+qualify Square graphic-4 "|" + (its egm) + " ( ) " + (its egm) if its contains color = White and its contains kind = pawn.
+qualify Square graphic-4 "|"+ (its egm) + " | | " + (its egm) if its contains color = White and its contains kind in { rook, king, queen }.
+qualify Square graphic-4 "|" + (its egm) +  " / \ " + (its egm) if its contains color = White and its contains kind = bishop.
+;qualify Square graphic-4 "|" + (its egm) + " |\) " + (its egm) if its contains = White-knight-B.
+qualify Square graphic-4 "|" + (its egm) + " (/| " + (its egm) if its contains = White-knight-G.
+qualify Square graphic-4 its egb if its contains color = Black and its contains kind in { pawn, rook, knight }.
+qualify Square graphic-4 "|" + (its egm) + " ( ) " + (its egm) if its contains color = Black and its contains kind in { king, queen }. 
+qualify Square graphic-4 "|" + (its egs * 2) + " , " + (its egs * 2) if its contains color = Black and its contains kind = bishop.
+qualify Square graphic-5 its egb if its contains = none.
+qualify Square graphic-5 "|" + (its egs) + " {___} " + (its egs) if its contains color = White.
+qualify Square graphic-5 its egb if its contains color = Black and its contains kind in { pawn, rook, knight, bishop }.
+qualify Square graphic-5 "|" + (its egs * 2) + " + " + (its egs * 2) if its contains color = Black and its contains kind = king. 
+qualify Square graphic-5 "|" + (its egm) + " -.- " + (its egm) if its contains color = Black and its contains kind = queen.
+
+
+visual Board at x 0 y 0 draw ("-" * 50) and
+	     for all Row do at x 1 y 0 draw each and
+	     at x 1 y 5 draw "C           D           E           F".
+
+visual Row for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-1) and
+       	       at x 0 y 0 draw "|" and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-2) and
+       	       at x 0 y 0 draw "|" and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-3) and
+       	       at x 0 y 0 draw "| " (its number) and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-4) and
+       	       at x 0 y 0 draw "|" and
+	       at x 1 y 0 draw "" and
+	       for its squares do 
+       	       	   at x 0 y 0 draw (each graphic-5) and
+       	       at x 0 y 0 draw "|" and
+       	       at x 1 y 0 draw ("-" * 50).
+
+
+;; QUERIES
+
+set-opt two-player-game [ White, Black ].
+set-opt max-time-ahead 3.
+set-opt auto-draw Chess.
+
+draw Chess.
+;White moves.
+;Black moves.
+;White do move D1 C1.
+;Black do move F7 F6.
+;White do move C1 C7.
+;Black do move F6 F5.
+;White do move.
+;Black do move.
+
+end-world.
+

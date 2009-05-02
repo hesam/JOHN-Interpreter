@@ -1,0 +1,71 @@
+{john-program}
+start-world towers-of-hanoi.
+
+;; CLASSES
+create Towers unsolved-stones solved-stones.
+create Peg stones.
+create Stone bigness.
+
+;; OBJECTS
+for [ ["A" name, 1], ["B" name, 2], ["C" name, 3], ["D" name, 4] ] do make Stone (each first) (each second).
+make Peg Peg1 [ A, B, C, D ].
+make Peg Peg2 [ ].
+make Peg Peg3 [ ].
+make Towers Hanoi [ D, C, B, A ] [ ].
+
+;; QUALIFICATIONS
+rel-qualify Peg:P1 sub-goal-satisfying-move Peg:P2 if 
+	    P2 = Peg3 and Hanoi unsolved-stones size > 0 and 
+	    P1 stones first = Hanoi unsolved-stones first.
+
+;; ACTIONS
+action Towers move Peg:P1 Peg:P2 consequence 
+       (its solved-stones = [ ] + P1 stones first + its solved-stones and
+       	its unsolved-stones = its unsolved-stones rest) if P1 sub-goal-satisfying-move P2 and
+       P2 stones = [ ] + P1 stones first + P2 stones and 
+       P1 stones = P1 stones rest.
+rule Towers move is not P1 = P2.
+rule Towers move is P1 stones size > 0.
+rule Towers move is P2 stones size = 0 or P1 stones first bigness < P2 stones first bigness.
+rule Towers move is not P1 stones first in its solved-stones.
+
+;; GOALS
+goal Towers win try its unsolved-stones size = 0.
+
+heuristic Towers win maximize its solved-stones size.
+
+;; VISUALS
+qualify Peg graphic-1 its stones first if its stones size = 4.
+qualify Peg graphic-1 " " * 9.
+qualify Peg graphic-2 its stones second if its stones size = 4.
+qualify Peg graphic-2 its stones first if its stones size = 3.
+qualify Peg graphic-2 " " * 9.
+qualify Peg graphic-3 its stones third if its stones size = 4.
+qualify Peg graphic-3 its stones second if its stones size = 3.
+qualify Peg graphic-3 its stones first if its stones size = 2.
+qualify Peg graphic-3 " " * 9.
+qualify Peg graphic-4 its stones last if its stones size > 0.
+qualify Peg graphic-4 " " * 9.
+qualify Stone spacing "" if its bigness = 4.
+qualify Stone spacing (" " * (4 - its bigness)).
+visual Stone draw (its spacing) ("-" * its bigness) (its name) ("-" * its bigness) (its spacing).
+visual Towers for [ graphic-1, graphic-2, graphic-3, graphic-4 ] do at x 1 y 0 draw (Peg1 each) (" " * 10) (Peg2 each) (" " * 10) (Peg3 each) and
+	      at x 1 y 0 draw ("=" * 9) (" " * 10) ("=" * 9) (" " * 10) ("=" * 9) and
+	      at x 1 y 0 draw "  Peg1" (" " * 15) "Peg2" (" " * 15) "Peg3".
+
+
+;; QUERIES
+
+set-opt max-time-ahead 8.
+set-opt auto-draw Hanoi.
+
+draw Hanoi.
+;Hanoi do move Peg2 Peg3.
+;Hanoi satisfy win.
+end-world.
+
+
+
+
+
+

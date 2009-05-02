@@ -1,0 +1,147 @@
+{ john-program }
+
+;; Register (Board) types:
+;;  -----   -----  
+;; |     | |  |  | 
+;; |     | |  |  | 
+;;  -----   -----  
+;;    0       1         
+;;
+;; e.g.
+;;
+;;   BP     AX AL
+;;           AX
+;;
+
+start-world ssa.
+
+;; CLASSES
+create Allocator unallocated-variables allocations-cost.
+create Variable length next-range-to-assign-index live-ranges.
+create Register type section priority next-right allocations.
+
+;; QUALIFICATIONS
+qualify Word repeatn: N [ ] if N = 0.
+qualify Word repeatn: N (its repeatn: (N - 1)) + it.
+qualify Number asIndex it / 2.
+qualify Variable next-live-range 
+        [ (its live-ranges at: (its next-range-to-assign-index)) first asIndex, 
+	  (its live-ranges at: (its next-range-to-assign-index)) second asIndex - 1]
+	  if its next-range-to-assign-index < its live-ranges size.
+qualify Variable repeatn: N [ ] if N = 0.
+qualify Variable repeatn: N (its repeatn: (N - 1)) + it.
+qualify Variable repeatList it repeatn: (its next-live-range second - its next-live-range first + 1).
+qualify Allocator next-variable its unallocated-variables first.
+qualify Allocator next-variable-start its next-variable next-live-range first.
+qualify Allocator next-variable-end its next-variable next-live-range second.
+
+qualify Allocator canAllocate: Variable if 
+        for any all Register do each canAllocate: Variable = yes.
+qualify Register allocationWith: Variable 
+        its allocations to: (Variable next-live-range first - 1) +
+        Variable repeatList + its allocations from: (Variable next-live-range second + 1).
+qualify Register canAllocate: Variable if
+        (its type = 1 or its section = high) and
+        (Variable length = 2 or 
+	 (not its next-right = no and 
+	  for every Variable next-live-range do its next-right allocations at: each = empty)) and
+        for every Variable next-live-range do its allocations at: each = empty.
+
+
+;; OBJECTS
+;; variable
+for [ [ "VA" name, 4, [ [ 2, 6 ] ] ], [ "VB" name, 4, [ [ 6, 14 ] ] ], [ "VC" name, 4, [ [ 26, 46 ] ] ], [ "VD" name, 4, [ [ 34, 74 ] ] ], [ "VE" name, 4, [ [ 46, 54 ] ] ] ] do make Variable (each first) (each second) 0 (each third).
+;; type-1 registers
+for [ ["AH" name, high, 1, "AL" name], ["AL" name, low, 2, no], ["BH" name, high, 3, "BL" name], ["BL" name, low, 4, no], ["CH" name, high, 5, "CL" name], ["CL" name, low, 6, no], ["DH" name, high, 7, "DL" name], ["DL" name, low, 8, no] ] do make Register (each first) 1 (each second) (each third) (each fourth) (empty repeatn: 42).
+;; type-0 registers
+for [ ["BPH" name, high, 9, "BPL" name], ["BPL" name, low, 10, no], ["SIH" name, high, 11, "SIL" name], ["SIL" name, low, 12, no], ["DIH" name, high, 13, "DIL" name], ["DIL" name, low, 14, no], ["SPH" name, high, 15, "SPL" name], ["SPL" name, low, 16, no] ] do make Register (each first) 0 (each second) (each third) (each fourth) (empty repeatn: 42).
+make Allocator Al (all Variable) 0.
+
+;; ACTIONS
+action Allocator precolor Register Interval consequence
+       Register allocations = Register allocations to: (Interval first asIndex - 1) + 
+                              precolored repeatn: ((Interval second - Interval first) asIndex) +
+		   	      Register allocations from: (Interval second asIndex).
+
+action Allocator assign Register Variable consequence 
+       Register allocations = Register allocationWith: Variable and
+       Register next-right allocations = (Register next-right) allocationWith: Variable 
+                if Variable length = 4 and
+       Variable next-range-to-assign-index = Variable next-range-to-assign-index + 1 and
+       its unallocated-variables = its unallocated-variables - Variable 
+           if Variable next-range-to-assign-index = Variable live-ranges size and
+       its allocations-cost = its allocations-cost + Register priority.
+
+rule Allocator assign is not Variable next-live-range = no.
+rule Allocator assign is Register canAllocate: Variable = yes.
+
+action Allocator split Register:RegisterFrom Register:RegisterTo consequence
+       RegisterTo allocations = RegisterTo allocations to: (its next-variable-start - 2) +       
+                                RegisterFrom allocations from: (its next-variable-start - 1) and
+       RegisterFrom allocations = RegisterFrom allocations to: (its next-variable-start - 2) +
+                                  empty repeatn: (RegisterFrom allocations size - (its next-variable-start - 1)).
+rule Allocator split is not RegisterFrom = RegisterTo.
+rule Allocator split is not RegisterTo = RegisterFrom next-right.
+rule Allocator split is not (RegisterFrom allocations at: (its next-variable-start)) in [empty, precolored].
+rule Allocator split is RegisterFrom allocations at: (its next-variable-start) length = 2.
+rule Allocator split is RegisterTo allocations from: (its next-variable-start - 1) 
+                                                 to: (its next-variable-end) = 
+	                empty repeatn: (its next-variable-end - its next-variable-start + 2).
+
+;; GOALS
+goal Allocator allocation try its unallocated-variables size = 0.
+
+;; HEURISTICS
+heuristic Allocator allocation minimize its allocations-cost.
+
+;; OPTIMIZATIONS
+action-optimization Allocator assign dynamically establish Variable = its next-variable.
+action-optimization Allocator assign dynamically establish Variable length = 2 or not Register next-right = no.
+goal-optimization Allocator allocation use split if it canAllocate: (its next-variable) = no.
+goal-optimization Allocator allocation use assign if it canAllocate: (its next-variable) = yes.
+
+;; VISUALS
+qualify Number symbol " " + it if it < 10.
+qualify Number symbol it.
+qualify Number zeroToN [ ] if it < 0.
+qualify Number zeroToN (it - 1) zeroToN + it.
+
+qualify Word symbol "--" if it = empty.
+qualify Word symbol "XX" if it = precolored.
+qualify Variable symbol its name.
+
+visual Allocator draw " I AH AL BH BL CH CL DH DL BP    SI    DI    SP   " and 
+       for (AH allocations size - 2) zeroToN do at x 1 y 0 draw ((each * 2) symbol) " " (AH allocations at: each symbol) " " (AL allocations at: each symbol) " " (BH allocations at: each symbol) " " (BL allocations at: each symbol) " " (CH allocations at: each symbol) " " (CL allocations at: each symbol) " " (DH allocations at: each symbol) " " (DL allocations at: each symbol) " " (BPH allocations at: each symbol) " " (BPL allocations at: each symbol) " " (SIH allocations at: each symbol) " " (SIL allocations at: each symbol) " " (DIH allocations at: each symbol) " " (DIL allocations at: each symbol) " " (SPH allocations at: each symbol) " " (SPL allocations at: each symbol).
+
+;set-opt auto-draw Al.
+set-opt max-time-ahead 1.
+
+draw Al.
+; precolors:
+
+Al do precolor AH [18, 26].
+Al do precolor AH [62, 70].
+Al do precolor AH [74, 78].
+Al do precolor AL [18, 26].
+Al do precolor AL [62, 70].
+Al do precolor AL [74, 78].
+Al do precolor CH [18, 20].
+Al do precolor CH [62, 64].
+Al do precolor CL [18, 20].
+Al do precolor CL [62, 64].
+Al do precolor DH [18, 20].
+Al do precolor DH [62, 64].
+Al do precolor DL [18, 20].
+Al do precolor DL [62, 64].
+draw Al.
+; start reg alloc:
+/;
+Al do assign AH VA.
+Al do assign AH VB.
+Al do assign AH VC.
+Al do assign CH VD.
+Al do assign AH VE.
+draw Al.
+;/
+Al satisfy allocation.
+end-world.

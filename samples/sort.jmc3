@@ -1,0 +1,37 @@
+{ john-program }
+
+;; MEANING ;;;;;;;;;;;;;
+bound Integer [0,30].
+class AList: 30 Integer List inp, out.
+qualify List sorted if for all I in (its indices - its lastIndex) | it at: I <= it at: (I + 1).
+qualify List permutationOf: L if for all E in all Integer | it count: E =  L count: E.
+qualify AList sorted if its out permutationOf: (its inp) and its out sorted.
+goal AList sort it sorted.
+
+;; TEST ;;;
+make AList L1 [7,10,2,4,3,9,3,8,13,5,20,18,9,20,1,10,5,7,12,2,8,5,19,15,5,4,13,11,4,17] (List new: 30).
+;L1 solve sort.
+
+
+/;
+;; OPTIMIZATIONS ;;;;;;;
+
+;< selection sort >
+goal-optimization AList sort selectionSort its out := its inp selectionSort.
+qualify List selectionSort it if its size < 2, [ its min ] + ( it - its min ) selectionSort.
+goal-optimization AList sort selectionSort its out := its inp selectionSortBroken.
+qualify List selectionSortBroken it if its size < 2, [ its max ] + ( it - its max ) selectionSortBroken.
+
+;< insertion sort >
+goal-optimization AList sort insertionSort its out := its inp insertionSort.
+qualify List insertionSort it if its size < 2, (its rest insertionSort) insert: (its first).
+qualify List insert: E [ E ] if it = [], [ E ] + it if E <= its first, [ its first ] + its rest insert: E.
+
+; < first = min >
+goal-optimization AList sort firstIsMin its out := [ its inp min ] + its out rest.
+
+L1 satisfy sort using <optimizaiton name>.
+;/
+
+
+

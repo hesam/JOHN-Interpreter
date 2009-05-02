@@ -1,0 +1,91 @@
+{ john-program }
+
+start-world poker-hands.
+
+;; CLASSES
+
+create Kind number.
+create Suit.
+create Card kind suit.
+create Hand cards.
+create HandName worth.
+create Dealer cards.
+create Player hand.
+
+;; OBJECTS
+
+for { ["Royal-flush" name, 9], ["Straight-flush" name, 8], ["Four-of-a-kind" name, 7], ["Full-house" name, 6], ["Flush" name, 5], ["Straight" name, 4], ["Three-of-a-kind" name, 3], ["Two-pairs" name, 2], ["One-pair" name, 1], ["Nothing" name, 0] } do
+      make HandName (each first) (each second).
+for { ["Ace" name, 1], ["Duece" name, 2], ["Three" name, 3], ["Four" name, 4], ["Five" name, 5], ["Six" name, 6], ["Seven" name, 7], ["Eight" name, 8], ["Nine" name, 9], ["Ten" name, 10], ["Jack" name, 11], ["Queen" name, 12], ["King" name, 13] } do make Kind (each first) (each second).
+for { "Diamonds" name, "Clubs" name, "Hearts" name, "Spades" name } do make Suit each.
+for all Kind * all Suit do make Card (each first name + "-of-" + each second name) ( each first ) ( each second ).
+make Dealer Guy (52 random Card).
+make Hand Myhand { }.
+make Hand Yourhand { }.
+make Player My Myhand.
+make Player Your Yourhand.
+
+;; QUALIFICATIONS
+
+qualify Hand royal-flush if its flush = yes and its cards kind = { Ten, Jack, Queen, King, Ace }.
+qualify Hand straight-flush if its straight = yes and its flush = yes.
+qualify Hand four-of-a-kind if for any all Kind do (select its cards by which kind = each) size = 4.
+qualify Hand full-house if its cards kind size = 2 and its four-of-a-kind = no.
+qualify Hand flush if its cards suit size = 1.
+qualify Hand straight if (select its cards by which kind number + 1 in its cards kind number and 
+	     	       	      	  	      which kind number - 1 in its cards kind number) size = 3 and
+			 (select its cards by which kind number + 1 in its cards kind number or 
+	     	       	      	  	      which kind number - 1 in its cards kind number) size = 5.
+qualify Hand three-of-a-kind if for any all Kind do (select its cards by which kind = each) size = 3.
+qualify Hand two-pairs if its three-of-a-kind = no and its cards kind size = 3.
+qualify Hand one-pair if its cards kind size = 4.
+qualify Hand value Royal-flush if its royal-flush = yes.
+qualify Hand value Straight-flush if its straight-flush = yes and its royal-flush = no.
+qualify Hand value Four-of-a-kind if its four-of-a-kind = yes.
+qualify Hand value Full-house if its full-house = yes.
+qualify Hand value Flush if its flush = yes and
+	      	            its royal-flush = no and
+		      	    its straight-flush = no.
+qualify Hand value Straight if its straight = yes and 
+	      	    	       its royal-flush = no and 
+			       its straight-flush = no.
+qualify Hand value Three-of-a-kind if its three-of-a-kind = yes and
+	      	    		      its four-of-a-kind = no and
+				      its full-house = no.
+qualify Hand value Two-pairs if its two-pairs = yes.
+qualify Hand value One-pair if its one-pair = yes.
+qualify Hand value Nothing if its flush = no and
+	      	    	      its straight = no and
+			      its three-of-a-kind = no and
+			      its two-pairs = no and
+			      its one-pair = no.
+
+rel-qualify Hand:A better Hand:B if A value worth > B value worth. 
+rel-qualify Hand:A worse Hand:B if A value worth < B value worth. 
+
+;; ACTIONS
+
+action Dealer deal consequence 
+       it do deal-player My and
+       it do deal-player Your.
+
+rule Dealer deal is its cards size >= 10.
+
+action Dealer deal-player Player consequence 
+       Player hand cards = 5 random its cards and
+       its cards = its cards - Player hand cards.
+
+rule Dealer deal-player is its cards size >= 5.
+
+;; QUERIES
+
+Guy do deal.
+My hand cards.
+My hand value.
+Your hand cards.
+Your hand value.
+is (My hand) better (Your hand).
+
+end-world.
+
+

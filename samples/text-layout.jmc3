@@ -1,0 +1,34 @@
+{ john-program }
+
+;; MEANING ;;;;;;;;;;;;;
+class TextBox: Integer width, 20 Word List words, 5 Integer List lineBreaks.
+
+qualify List length -1 if its size = 0, its first + its rest length + 1.
+qualify List partitionAt: Idxs 
+        [ it ] if Idxs size = 0, 
+	[ it to: (Idxs first) ] + (it from: (Idxs first + 1)) partitionAt: (Idxs rest).
+qualify TextBox lines its words partitionAt: (its lineBreaks).
+qualify TextBox laidOut if for all I in (its lineBreaks indices - its lineBreaks lastIndex ) 
+                           | it from length < its width.
+goal TextBox layout it laidOut.
+
+;; OPTIMIZATIONS ;;;;;;;
+
+;; VISUALS ;;;;;;;;;;;;;
+visual TextBox for all L in its lines do at x 1 y 0 draw L.
+visual List for all E in it do draw E " ".
+
+;; TEST ;;;;;;;;;;;;;;;;
+make TextBox Text 20 [4,2,3,3,10,4,3,3,4,3,5,2,10,9,4,4,5,2,2,7] [3,6,10,12,15].
+
+
+/;
+
+this is one too 
+simplistic text box 
+for sure but there 
+is thisverygig- 
+anticword here that 
+needs to be handled 
+
+;/

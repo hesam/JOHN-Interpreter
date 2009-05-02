@@ -1,0 +1,62 @@
+{ john-program }
+
+start-world fibonacci.
+
+create Calculator answer temp.
+make Calculator Calc [ 1, 1 ] [ ].
+
+;action calculator set-answer val consequence its answer = val.
+
+;; MEANING 
+
+;;   n: 0 1 2 3 4 5 6  7  8  9  10
+;; fib: 1 1 2 3 5 8 13 21 34 55 89
+;;
+;; fib(n) = 1			<--- if 0 <= n <= 1
+;; fib(n) = fib(n-1) + fib(n-2) <--- if n > 1
+;;
+
+;; Fibanacci Sequence:
+qualify List butlast it - its last.
+qualify List is-fibonacci-sequence if it = [ ] or it = [ 1 ] or it = [ 1, 1 ] or
+	     		       	  (its size > 2 and 
+			           its butlast last + its butlast butlast last = its last and
+				   its butlast is-fibonacci-sequence = yes).
+
+;; Nth Fibanacci Number:
+qualify Number minus-one it - 1.
+qualify Number nth-fib 1 if it < 2.
+qualify Number nth-fib it minus-one nth-fib + it minus-one minus-one nth-fib if it > 1.
+
+goal Calculator fibonacci-sequence N try its answer size = N + 1 and 
+     			    	     	 its answer is-fibonacci-sequence = yes.
+
+heuristic Calculator fibonacci-sequence establish its answer is-fibonacci-sequence.
+
+goal-optimization Calculator fibonacci-sequence use fast-fib if its answer size > 10.
+goal-optimization Calculator fibonacci-sequence use slow-fib if its answer size <= 10.
+
+;; PROCEDURES:
+
+action Calculator fast-fib consequence
+       its answer = its answer + (its answer last + its answer butlast last).
+
+action Calculator slow-fib consequence
+       its answer = its answer + 
+       	   	    (its answer size minus-one minus-one nth-fib + its answer size minus-one nth-fib).
+
+action Calculator broken-fib consequence
+       its answer = its answer + 1.
+       
+;; QUERIES
+set-opt max-time-ahead 99.
+;Calc satisfy fibonacci-sequence 20 using slow-fib.
+;Calc satisfy fibonacci-sequence 20 using fast-fib.
+;Calc satisfy fibonacci-sequence 10 using fast-fib broken-fib.
+;Calc satisfy fibonacci-sequence 10 using fast-fib slow-fib.
+;Calc satisfy fibonacci-sequence 10 using fast-fib broken-fib.
+Calc satisfy fibonacci-sequence 20.
+Calc answer.
+Calc answer last.
+
+end-world.

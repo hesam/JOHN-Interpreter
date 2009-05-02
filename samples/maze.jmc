@@ -1,0 +1,101 @@
+{ john-program }
+
+;; takes around 11.5 mins to solve 8X8 board w/o any blocks (goal = H8)
+;; 49 secs if goal = H5
+
+start-world maze.
+
+;; CLASSES
+
+create Square col row contains is-goal.
+create Column number left right. 
+create Robot position goal-square.
+create Direction.
+
+;; OBJECTS
+
+for [ "Down" name, "Right" name, "Up" name, "Left" name ] do make Direction each.
+for [ [ "A" name, 1, no, "B" ], [ "B" name, 2, "A", "C" ], [ "C" name, 3, "B", "D" ], [ "D" name, 4, "C", "E" ], [ "E" name, 5, "D", "F" ], [ "F" name, 6, "E", "G"], [ "G" name, 7, "F", "H" ], [ "H" name, 8, "G", no ] ] do make Column (each first) (each second) (each third) (each fourth).
+for all Column * [ 1, 2, 3, 4, 5, 6, 7, 8 ] do make Square (each first name + each second) (each first) (each second) (one from [ none, none, none, block ]) no.  
+
+make Square A1 A 1 Robby no.
+make Square H8 H 8 none yes.
+make Robot Robby A1 H8.
+
+;; QUALIFICATIONS (DYNAMIC PROPERTIES)
+
+qualify Square Up (its col name + (its row + 1)) object if its row < 8.
+qualify Square Down (its col name + (its row - 1)) object if its row > 1.
+qualify Square Right (its col right + its row) object if its col number < 8.
+qualify Square Left (its col left + its row) object if its col number > 1.
+
+qualify Robot goal-distance (its position col number - its goal-square col number) abs +
+	      		    (its position row - its goal-square row) abs.
+
+rel-qualify Robot can-go Direction if not Robot position (Direction name) = no and
+	    	  	 	      not Robot position (Direction name) contains = block.
+
+;; ACTIONS
+
+action Robot move Direction 
+       consequence its position contains = visited and 
+       		   its position = its position (Direction name).
+
+rule Robot move is it can-go Direction.
+
+;; GOALS
+
+goal Robot find-goal try its position = its goal-square.
+heuristic Robot find-goal minimize its goal-distance.
+
+;; VISUALS
+
+create Board.
+create Row number.
+
+qualify Row squares select all Square by which row = its number.
+qualify Square symbol "R" if Robby position = it.
+qualify Square symbol "X" if its contains = block.
+qualify Square symbol "." if its contains = visited.
+qualify Square symbol "G" if its is-goal = yes.
+qualify Square symbol " " if its contains = none.
+
+for [ ["Row8" name, 8], ["Row7" name, 7], ["Row6" name, 6], ["Row5" name, 5], ["Row4" name, 4], ["Row3" name, 3], ["Row2" name, 2], ["Row1" name, 1] ] do make Row (each first) (each second).
+make Board Maze.
+
+visual Board at x 0 y 0 draw ("-" * 33) and
+	     for all Row do at x 1 y 0 draw each and
+	     at x 1 y 2 draw "A   B   C   D   E   F   G   H".
+
+visual Row for its squares do at x 0 y 0 draw "| " (each symbol) " " and
+       	       at x 0 y 0 draw "| " (its number) and
+       	       at x 1 y 0 draw ("-" * 33).
+       	      
+;; QUERIES
+
+set-opt max-time-ahead 15.
+set-opt auto-draw Maze.
+
+draw Maze.
+time.
+Robby position.
+;at time 0 Robby position.
+;at time 1 Robby position.
+;at time 2 Robby position.
+;at time 3 Robby position.
+;at time 4 Robby position.
+;at time 5 Robby position.
+;at time 6 Robby position.
+;at time 7 Robby position.
+;at time 8 Robby position.
+;at time 8 Robby position.
+;Robby do move Up.
+;Robby do move.
+Robby satisfy find-goal.
+;Robby satisfy find-goal by Robby.
+;Robby satisfy find-goal by Robby using move.
+;Robby do blah.
+;draw Maze.
+; done.
+
+end-world.

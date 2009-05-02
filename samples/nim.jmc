@@ -1,0 +1,22 @@
+{ john-program }
+start-world nim.
+create Board number-stones.
+create Player opponent turn.
+create Number-take-stones number.
+make Number-take-stones One 1.
+make Number-take-stones Two 2.
+make Board Nim 9.
+make Player Player1 Player2 yes.
+make Player Player2 Player1 no.
+qualify Player status won if its turn = no and Nim number-stones = 0.
+action Player take Number-take-stones 
+       consequence Nim number-stones = Nim number-stones - Number-take-stones number and
+		   its turn = no and
+		   its opponent turn = yes.
+rule Player take is its turn = yes.
+rule Player take is Number-take-stones number <= Nim number-stones.
+goal Player win try its status = won.
+heuristic Player win establish its status = won.
+set-opt two-player-game [ Player1, Player2 ].
+set-opt max-time-ahead 10.
+end-world.

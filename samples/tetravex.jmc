@@ -1,0 +1,130 @@
+{ john-program }
+
+/;
+-------------------------
+|       |       |       | 
+|       |       |       | 3
+|       |       |       | 
+-------------------------
+|       |       |       | 
+|       |       |       | 2                BOARD
+|       |       |       | 
+-------------------------
+|       |       |       | 
+|       |       |       | 1
+|       |       |       | 
+-------------------------
+   A        B       C
+-------------------------------------------------------------------------
+|   6   |   8   |   6   |   1   |   8   |   8   |   7   |   9   |   3   |  
+| 7   8 | 5   2 | 2   7 | 8   6 | 3   1 | 7   5 | 1   3 | 1   7 | 2   1 |    PIECES
+|   7   |   1   |   3   |   8   |   3   |   6   |   6   |   6   |   4   | 
+-------------------------------------------------------------------------
+   P1      P2      P3      P4      P5      P6      P7      P8      P9
+;/
+
+start-world tetravex.
+
+;; CLASSES
+create Column number left right.
+create Board next-piece out-pieces.
+create Square col row content.
+create Piece lf up rt dn location.
+
+;; OBJECTS
+for [ [ "A" name, 1, no, "B" ], [ "B" name, 2, "A", "C" ], [ "C" name, 3, "B", no ] ] do make Column (each first) (each second) (each third) (each fourth).
+for all Column * [ 1, 2, 3 ] do make Square ( each first name + each second ) ( each first ) ( each second ) none.
+for [ [ "P1" name, 7, 6, 8, 7 ], [ "P2" name, 5, 8, 2, 1 ], [ "P3" name, 2, 6, 7, 3 ], [ "P4" name, 8, 1, 6, 8 ], [ "P5" name, 3, 8, 1, 3 ], [ "P6" name, 7, 8, 5, 6 ], [ "P7" name, 1, 7, 3, 6 ], [ "P8" name, 1, 9, 7, 6 ], [ "P9" name, 2, 3, 1, 4 ] ] do make Piece ( each first ) ( each second ) ( each third ) ( each fourth ) ( each fifth ) out.
+make Board Tvex P1 (all Piece).
+
+;; QUALIFICATIONS (DYNAMIC PROPERTIES)
+qualify Square up ( its col name + ( its row + 1 ) ) object if its row < 3.
+qualify Square dn ( its col name + ( its row - 1 ) ) object if its row > 1.
+qualify Square rt ( its col right + its row ) object if its col number < 3.
+qualify Square lf ( its col left + its row ) object if its col number > 1.
+qualify Word opposite rt if it = lf.
+qualify Word opposite lf if it = rt.
+qualify Word opposite dn if it = up.
+qualify Word opposite up if it = dn.
+
+;; ACTIONS
+
+; put: puts a piece on a board square
+action Board put Piece Square consequence 
+       Piece location = Square and 
+       Square content = Piece and 
+       its out-pieces = its out-pieces - Piece.
+
+rule Board put is Square content = none.
+rule Board put is Piece location = out.
+rule Board put is for every [ dn, lf, up, rt ] do 
+     ( Square each = no or 
+       Square each content = none or
+       Square each content (each opposite) = Piece each ).
+
+;; take: takes a piece out
+action Board take Piece consequence 
+       Piece location content = none and 
+       Piece location = out and 
+       its out-pieces = its out-pieces + Piece.
+
+rule Board take is not Piece location = out.
+
+;; GOALS
+goal Board win try its out-pieces = [ ].
+
+;; HEURISTICS
+action-optimization Board put dynamically establish Piece = its out-pieces first.
+
+
+;; VISUALS
+create Row number.
+qualify Row squares select all Square by which row = its number.
+qualify Square lf-symbol " " if its content = none.
+qualify Square lf-symbol its content lf.
+qualify Square up-symbol " " if its content = none.
+qualify Square up-symbol its content up.
+qualify Square rt-symbol " " if its content = none.
+qualify Square rt-symbol its content rt.
+qualify Square dn-symbol " " if its content = none.
+qualify Square dn-symbol its content dn.
+qualify Piece lf-symbol its lf if its location = out.
+qualify Piece lf-symbol " ".
+qualify Piece up-symbol its up if its location = out.
+qualify Piece up-symbol " ".
+qualify Piece rt-symbol its rt if its location = out.
+qualify Piece rt-symbol " ".
+qualify Piece dn-symbol its dn if its location = out.
+qualify Piece dn-symbol " ".
+
+for [  ["Row3" name, 3], ["Row2" name, 2], ["Row1" name, 1] ] do make Row (each first) (each second).
+
+visual Board at x 0 y 0 draw ("-" * 25) and
+	     for all Row do at x 1 y 0 draw each and
+	     at x 1 y 2 draw " A        B       C" and at x 1 y 0 draw ("-" * 73) and 
+             at x 1 y 0 draw "" and
+             for all Piece do at x 0 y 0 draw "|   " (each up-symbol) "   " and 
+             at x 0 y 0 draw "| " and at x 1 y 0 draw "" and
+             for all Piece do at x 0 y 0 draw "| " (each lf-symbol) "   " (each rt-symbol) " " and
+             at x 0 y 0 draw "| " and at x 1 y 0 draw "" and
+             for all Piece do at x 0 y 0 draw "|   " (each dn-symbol) "   " and
+             at x 0 y 0 draw "| " and at x 1 y 0 draw ("-" * 73) and
+             at x 1 y 2 draw " P1      P2      P3      P4      P5      P6      P7      P8      P9".
+
+visual Row for its squares do at x 0 y 0 draw "|   " (each up-symbol) "   " and 
+           at x 0 y 0 draw "| " and at x 1 y 0 draw "" and
+           for its squares do at x 0 y 0 draw "| " (each lf-symbol) "   " (each rt-symbol) " " and
+           at x 0 y 0 draw "| " (its number) and at x 1 y 0 draw "" and
+           for its squares do at x 0 y 0 draw "|   " (each dn-symbol) "   " and
+           at x 0 y 0 draw "| " and at x 1 y 0 draw ("-" * 25).
+
+       	      
+;; QUERIES
+set-opt max-time-ahead 10.
+set-opt auto-draw Tvex.
+draw Tvex.
+; playing:
+;Tvex do put P1 B2.
+; solving:
+Tvex satisfy win using put.
+end-world.

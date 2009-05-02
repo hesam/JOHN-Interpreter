@@ -1,0 +1,123 @@
+{ john-program }
+
+;; Register (Board) types:
+;;  -----   -----  
+;; |     | |  |  | 
+;; |     | |  |  | 
+;;  -----   -----  
+;;    0       1         
+;;
+;; e.g.
+;;
+;;   BP     AX AL
+;;           AX
+;;
+
+start-world ssa.
+
+;; CLASSES
+create Allocator unallocated-variables allocations-cost.
+create Variable length next-range-to-assign-index live-ranges.
+create Register puzzle-type section priority next-right allocations.
+
+;; QUALIFICATIONS
+qualify Word repeatn: N [ ] if N = 0.
+qualify Word repeatn: N (its repeatn: (N - 1)) + it.
+qualify Number asIndex it / 2.
+qualify Variable next-live-range 
+        its live-ranges at: (its next-range-to-assign-index) if 
+	    its next-range-to-assign-index < its live-ranges size.
+qualify Variable repeatn: N [ ] if N = 0.
+qualify Variable repeatn: N (its repeatn: (N - 1)) + it.
+qualify Allocator next-variable its unallocated-variables first.
+qualify Allocator next-variable-start its next-variable next-live-range first.
+qualify Allocator next-variable-end its next-variable next-live-range second.
+qualify Allocator canAllocate: Variable
+        is for any all Register do each canAllocate: Variable = yes.
+qualify Register freeAtInterval: Interval
+        is for every Interval indexRange do its allocations at: each = empty.
+qualify Register canAllocate: Variable if
+        (its puzzle-type = 1 or its section = high) and
+        (Variable length = 2 or 
+	 (not its next-right = no and 
+	  its next-right freeAtInterval: (Variable next-live-range) = yes)) and
+        its freeAtInterval: (Variable next-live-range) = yes.
+qualify Register splitIntervalForVar: Var
+        [ Var next-live-range first - 2, (its allocations at: (Var next-live-range first asIndex)) live-ranges first second ].
+
+;; OBJECTS
+for [ [ "Va" name, 2, [ [ 2, 22 ] ] ], [ "VB" name, 4, [ [ 6, 14 ] ] ], [ "Vc" name, 2, [ [ 0, 4 ], [ 10, 18 ] ] ], [ "Vd" name, 2, [ [ 14, 22 ] ] ], [ "VE" name, 4, [ [ 18, 22 ] ] ] ] do make Variable (each first) (each second) 0 (each third).
+for [ ["AH" name, high, 1, "AL" name], ["AL" name, low, 2, no], ["BH" name, high, 3, "BL" name], ["BL" name, low, 4, no] ] do make Register (each first) 1 (each second) (each third) (each fourth) (empty repeatn: 12).
+make Allocator Al (all Variable) 0.
+
+;; ACTIONS
+action Allocator precolor Register Interval consequence
+       Register allocations = Register allocations atInterval: Interval put: precolored.
+
+action Allocator assign Register Variable consequence 
+       Register allocations = Register allocations atInterval: (Variable next-live-range) put: Variable and
+       Register next-right allocations = Register next-right allocations atInterval: (Variable next-live-range) put: Variable if Variable length = 4 and
+       Variable next-range-to-assign-index = Variable next-range-to-assign-index + 1 and
+       its unallocated-variables = its unallocated-variables - Variable 
+           if Variable next-range-to-assign-index = Variable live-ranges size and
+       its allocations-cost = its allocations-cost + Register priority.
+
+rule Allocator assign is not Variable next-live-range = no.
+rule Allocator assign is Register canAllocate: Variable = yes.
+
+action Allocator split Register:RegisterFrom Register:RegisterTo consequence
+       RegisterTo allocations = RegisterTo allocations atInterval: (RegisterFrom splitIntervalForVar: (its next-variable)) put: (RegisterFrom allocations at: (its next-variable-start asIndex)) and
+       RegisterFrom allocations = RegisterFrom allocations atInterval: (RegisterFrom splitIntervalForVar: (its next-variable)) put: empty.
+
+rule Allocator split is not RegisterFrom = RegisterTo.
+rule Allocator split is not RegisterTo = RegisterFrom next-right.
+rule Allocator split is not (RegisterFrom allocations at: (its next-variable-start asIndex)) in [empty, precolored].
+rule Allocator split is RegisterFrom allocations at: (its next-variable-start asIndex) length = 2.
+rule Allocator split is RegisterTo freeAtInterval: (RegisterFrom splitIntervalForVar: (its next-variable)) = yes.
+
+;; GOALS
+goal Allocator allocation try its unallocated-variables size = 0.
+
+;; HEURISTICS
+heuristic Allocator allocation minimize its allocations-cost.
+
+;; OPTIMIZATIONS
+action-optimization Allocator assign dynamically establish Variable = its next-variable.
+action-optimization Allocator assign dynamically establish Variable length = 2 or not Register next-right = no.
+goal-optimization Allocator allocation use split if it canAllocate: (its next-variable) = no.
+goal-optimization Allocator allocation use assign if it canAllocate: (its next-variable) = yes.
+
+;; VISUALS
+qualify Number symbol " " + it if it < 10.
+qualify Number symbol it.
+qualify Word symbol "--" if it = empty.
+qualify Word symbol "XX" if it = precolored.
+qualify Variable symbol its name.
+qualify List indexRange [ its first asIndex ] if its first >= its second - 2.
+qualify List indexRange [ its first asIndex ] + [ its first + 2, its second] indexRange.
+qualify List atInterval: Interval put: Val
+        it to: (Interval first asIndex - 1) + 
+	Val repeatn: ((Interval second - Interval first) asIndex) +
+	it from: (Interval second asIndex).
+
+visual Allocator draw " I AH AL BH BL" and 
+       for [0, AH allocations size * 2] indexRange do at x 1 y 0 draw ((each * 2) symbol) " " (AH allocations at: each symbol) " " (AL allocations at: each symbol) " " (BH allocations at: each symbol) " " (BL allocations at: each symbol).
+
+set-opt auto-draw Al.
+set-opt max-time-ahead 1.
+
+draw Al.
+; precolors:
+Al do precolor AL [4, 8].
+Al do precolor BL [14, 16].
+
+; start reg alloc:
+;Al do assign AH Va.
+;Al do assign BH VB.
+;Al do assign AL Vc.
+;Al do assign AL Vc.
+;Al do assign BH Vd.
+;Al do split AH BL.
+;Al do assign AH VE.
+Al satisfy allocation.
+end-world.

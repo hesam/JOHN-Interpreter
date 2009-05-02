@@ -1,0 +1,174 @@
+{ john-program }
+
+/;
+   http://warp.povusers.org/SortComparison/integers.html 
+   http://vision.bc.edu/~dmartin/teaching/sorting/anim-html/all.html
+;/
+
+start-world sort.
+
+create AList items.
+make AList L1 (10 random Number).
+
+;; GOAL/MEANING ;;;;;;;;;;;;;;;;;;;;;;;
+
+qualify List sorted if its size < 2.
+qualify List sorted if its first <= its second and
+	     	       its rest sorted = yes.
+
+qualify List unsortedness 0 if its size < 2.
+qualify List unsortedness its rest unsortedness if its first <= its second.
+qualify List unsortedness 1 + its rest unsortedness if its first > its second.
+
+qualify List nearly-sorted if its unsortedness < 2.
+qualify List nearly-reversed if its unsortedness > its size - 2.
+qualify List mostly-unsorted if its unsortedness >= 2 and its nearly-reversed = no.
+
+goal AList sort try its items sorted = yes.
+
+;; OPTIMIZATIONS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+goal-optimization AList sort use insertion-sort if its items nearly-sorted = yes.
+goal-optimization AList sort use merge-sort if its items nearly-reversed = yes.
+goal-optimization AList sort use quick-sort if its items mostly-unsorted = yes.
+
+;; PROCEDURES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+create Globals b1 b2 b3 s1 i1 i2 i3 m1 m2 q1 q2 q3 q4 q5 q6.
+make Globals Glb 0 (L1 items size - 1) 0     0     0 0 yes    0 0  0 0 (L1 items size - 1) yes [ [ 0, L1 items size - 1 ] ] 0.
+
+action Globals reset consequence its t1 = 0 and its t2 = 0.
+
+/;------------------------------------------------------------
+			Bubble Sort
+------------------------------------------------------------;/
+action AList bubble-sort consequence
+       ( Glb b3 = its items at: (Glb b1) and
+         its items at (Glb b1) = its items at: (Glb b1 + 1) and
+         its items at (Glb b1 + 1) = Glb b3 ) 
+           if (its items at: (Glb b1 + 1) < its items at: (Glb b1) and
+               Glb b1 < Glb b2) and
+       Glb b1 = Glb b1 + 1 and
+       (Glb b2 = Glb b2 - 1 and Glb b1 = 0) if Glb b1 = Glb b2.
+
+rule AList bubble-sort is Glb b2 > 0.
+
+/;------------------------------------------------------------
+			Selection Sort
+------------------------------------------------------------;/
+qualify List min-index 0 if its first = its min.
+qualify List min-index 1 + its rest min-index if not its first = its min.
+qualify List but-min it - its min.
+
+action AList selection-sort consequence
+       its items = its items to: (Glb s1 - 1) +
+                   (its items from: Glb s1) min +
+                   (its items from: Glb s1) but-min and
+       Glb s1 = Glb s1 + 1.
+
+rule AList selection-sort is Glb s1 < its items size.
+
+/;------------------------------------------------------------
+			Insertion Sort
+------------------------------------------------------------;/
+qualify AList current-item its items at: Glb i1.
+qualify AList item-to-insert its items at: (Glb i2 + 1).
+
+action AList insertion-sort consequence
+       (its items = its items to: (Glb i1 - 1) +
+                   its item-to-insert + 
+                   its items from: Glb i1 to: Glb i2 +
+                   its items from: (Glb i2 + 2) and
+	Glb i1 = 0 and
+        Glb i2 = Glb i2 + 1 and
+	Glb i3 = no) 
+           if (Glb i2 < Glb i1 or its current-item >= its item-to-insert) and
+        Glb i1 = Glb i1 + 1 if Glb i3 = yes and
+        Glb i3 = yes.
+
+rule AList insertion-sort is Glb i2 + 1 < its items size.
+
+/;------------------------------------------------------------
+			Merge Sort
+------------------------------------------------------------;/
+qualify List merged: L it if L size = 0.
+qualify List merged: L L if its size = 0.
+qualify List merged: L [ its first ] + (its rest) merged: L if its first < L first.
+qualify List merged: L [ L first ] + it merged: (L rest) if its first >= L first.
+
+qualify List from: From toE: To it from: From to: To if To < its size.
+qualify List from: From toE: To it from: From if To >= its size.
+
+action AList merge-sort consequence
+       its items = 
+       	   its items to: (Glb m1 - 1) +
+       	   (its items from: Glb m1 toE: (Glb m1 + Glb m2)) merged:
+       	       ((its items) from: (Glb m1 + Glb m2 + 1) toE: (Glb m1 + 2 * Glb m2 + 1)) +
+	   its items from: (Glb m1 + 2 * Glb m2 + 2) if Glb m1 + Glb m2 + 1 < its items size and
+       Glb m1 = Glb m1 + 2 * Glb m2 + 2 and
+       it do merge-sort if Glb m1 < its items size and
+       (Glb m2 = Glb m2 * 2 + 1 and Glb m1 = 0) if Glb m1 >= its items size.
+
+rule AList merge-sort is Glb m2 <= its items size.
+
+/;------------------------------------------------------------
+			Quick Sort
+------------------------------------------------------------;/
+qualify List fromS: From it from: From if From >= 0.
+qualify List fromS: From [ ] if From < 0.
+qualify List toE: To it to: To if To < its size.
+qualify List toE: To [ ] if To >= its size.
+
+qualify List swapIndex: X withIndex: Y it if X = Y.
+qualify List swapIndex: X withIndex: Y 
+        it toE: (X - 1) + it at: Y + it from: (X + 1) to: (Y - 1) + 
+	it at: X + it fromS: (Y + 1).
+
+action AList quick-sort consequence 
+       (Glb q1 = Glb q5 first first and
+        Glb q2 = Glb q5 first second and
+        Glb q3 = Glb q1 and
+	Glb q6 = Glb q1 and
+        Glb q5 = Glb q5 rest) if Glb q4 = yes and
+
+       ;; partition
+       Glb q4 = no if Glb q6 < Glb q2 and
+       Glb q4 = yes if Glb q6 = Glb q2 and
+       (its items = (its items) swapIndex: (Glb q3) withIndex: (Glb q6) and
+       	Glb q3 = Glb q3 + 1)
+       	    if its items at: (Glb q2) >= its items at: (Glb q6) and
+       Glb q6 = Glb q6 + 1 if Glb q4 = no and
+
+       (Glb q5 = [ [Glb q1, Glb q3 - 2] ] + Glb q5 if Glb q1 < Glb q3 - 2 and
+        Glb q5 = [ [Glb q3, Glb q2] ] + Glb q5 if Glb q3 < Glb q2) if Glb q4 = yes.
+       
+rule AList quick-sort is Glb q4 = no or Glb q5 size > 0.
+
+;; QUERIES
+
+set-opt max-time-ahead 1000.
+
+L1 items.
+L1 items nearly-sorted.
+L1 items nearly-reversed.
+L1 items mostly-unsorted.
+is L1 items sorted = yes.
+
+
+;L1 satisfy sort.
+;L1 satisfy sort using bubble-sort selection-sort insertion-sort merge-sort quick-sort.
+L1 satisfy sort using bubble-sort.
+;L1 satisfy sort using selection-sort.
+;L1 satisfy sort using insertion-sort.
+;L1 satisfy sort using merge-sort.
+;L1 satisfy sort using quick-sort.
+
+
+
+L1 items.
+is L1 items sorted = yes.
+
+
+end-world.
