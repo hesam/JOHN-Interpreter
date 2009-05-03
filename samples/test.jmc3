@@ -135,7 +135,6 @@ Abe age - Lu age.
 Lu age.
 Lu age := 22.
 Lu age.
-end-word.
 class Dir: Integer blah,bloo, Set plab.
 qualify Dir blah-twice its blah * 2.
 qualify Dir blah: N its blah * N.

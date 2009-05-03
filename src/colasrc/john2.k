@@ -92,11 +92,9 @@
 [solverInfo at: 'vars put: [IdentityDictionary new]]
 [solverInfo at: 'varTypes put: [IdentityDictionary new]]
 [solverInfo at: 'bounds put: (let ((d [IdentityDictionary new])) [d at: 'Integer put: '0] d)]
-;; to remember which msg sends should use compiled_<name> versions of qualifications:
-[solverInfo at: 'compiled-msg-sends put: [IdentityDictionary new]]
 [solverInfo at: 'oopta put: [IdentityDictionary new]] ;; encoding from oop program to atom univ
 [solverInfo at: 'atoop put: [IdentityDictionary new]] ;; decoding from atom univ to oop program
-
+[solverInfo at: 'setNum put: '0]
 
 ;; internal flags
 (define john-minimize 'john-minimize)
@@ -187,6 +185,9 @@
 ;; currently 3 types: 1. "maximize", 2. "minimize" (an expr), or 3. "establish" (a predicate) 
 (define-type GoalHeuristic Object (goal type weight expression))
 
+;; used to represent sets in solver world...
+(define-type Compiled_Set Object (string))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -260,6 +261,9 @@
 	   (set i [i + '1]))
     newOrderedCollection))
 
+(define [OrderedCollection isEmpty]
+  [[self size] = '0])
+
 (define [OrderedCollection from: f]
   [self from: f to: [[self size] - '1]])
 
@@ -324,7 +328,7 @@
     (while [i < [self size]] [res add: i] (set i [i + '1]))
     res))
 
-(define [OrderedCollection lastIndex]
+(define [List lastIndex]
   [[self size] - '1])
 
 ;; returns the keys in dictionary with min or max value
@@ -570,6 +574,9 @@
 (define [Object printMeHelper]
   (let ((p (if (== self john-false) john-no (if (== self john-true) john-yes self)))) ;; fixme
     [p asString]))
+
+(define [Compiled_Set asString]
+  [self string])
 
 (define [Object printlnMe]
   [[self printMeHelper] putln])
@@ -1335,8 +1342,8 @@
 							 with: ',[propertyNames at: i]
 							 with: ',[[propertyTypes at: i] second]]]
 					    [[solverInfo at: 'varTypes] 
-					     at: ',[[propertyTypes at: i] first] 
-					     put: ',[[propertyTypes at: i] second]]
+					     at: ',[[[propertyTypes at: i] second] last]
+					     put: '(,[[[propertyTypes at: i] second] last])]
 					    ;; hack fixme: checking if this property
 					    ;; is referencing a yet undef obj:
 					    ;; (if the property value is a capitalized
@@ -1375,11 +1382,7 @@
 					      (let ((key [[[self name] , '.] , ',[propertyNames at: i]]))
 						(if [[solverInfo at: 'oopta] includesKey: key]
 						    [[solverInfo at: 'oopta] at: key]
-						    (send ',[propertyNames at: i] self))))
-					    ;; mark it as also a compiled msg send for solver
-					    [[solverInfo at: 'compiled-msg-sends]
-					     at: ',[propertyNames at: i]  put: '1]
-					    )
+						    (send ',[propertyNames at: i] self 0)))))
 				   ])
 			  (set i [i + '1]))
 		   [Array with: e1 with: e2]))
@@ -1638,9 +1641,8 @@
 			       ,argCheckCode)
 			  mainBody))
 		(goalSolveNoOptBody
-		 `(let ()
-		    (reset-solver-info)
-		    (compile-to-solver-source self ',['compiled_goal_ , name])
+		 `(let ((asmParts (reset-solver-info self ',['compiled_goal_ , name])))
+		    (compile-to-solver-source self ',['compiled_goal_ , name] asmParts)
 		    (if [solverInfo at: 'outcome] john-ok john-false)))
 		(goalSolveBody 
 		 `(let ()
@@ -1663,6 +1665,9 @@
 			 `(let () 
 			    ;; this one uses john's planner:
 			    (define-send ',[name , '-sat] ,className byActors usingActions isForAction ,@actionVarNames ,body)
+			    ;; this one for debugging... fixme
+			    (define-send ',[name , '-init] ,className
+			      (let () (reset-solver-info self ',['compiled_goal_ , name]) john-ok))
 			    ;; this one uses external solver:
 			    (define-send ',[name , '-solve] ,className ,goalSolveBody)))))
 	    `(let ()
@@ -1928,22 +1933,23 @@
 	     (if [i < s] (set res [res , '", "])))
       [res , '"}"])))
 
-(define compile-to-solver-source
+(define reset-solver-info
   (lambda (obj compiledGoalName)
     (let ((classes [[johnCurrently currentMicroWorld] classes]) (objName [obj name])
 	  (oopta [solverInfo at: 'oopta]) (atoop [solverInfo at: 'atoop])
-	  (unknowns [solverInfo at: 'unknowns])
+	  (unknowns [IdentityDictionary new])
 	  (intB [[solverInfo at: 'bounds] at: 'Integer]) (i '0) (atomN '0) (relN '0) 
 	  (varTypes [solverInfo at: 'varTypes]) (varTypesK [varTypes keys])
 	  (intBStr '"int_bounds: [") (knownsBStr '"") (unknownsBStr '"") 
 	  (functionsBStr '"solve ")
 	  (asm [['"solver: \"" , [solverInfo at: 'solver]] , 
 		'"\"\nsymmetry_breaking: 3\nflatten: false\n"]))      
+      [solverInfo at: 'unknowns put: unknowns]
+      [solverInfo at: 'setNum put: '0]
       ;; figure out total universe atoms...
       (while [i < [varTypesK size]]
-	     (let ((k [varTypesK at: i]) (fullTp [varTypes at: k]) (tpName [fullTp first]) 
-		   (tp [classes at: [fullTp last]]))
-	       (let ((range (send 'all tp)) (j '0))
+	     (let ((k [varTypesK at: i]) (fullTp [varTypes at: k])
+		   (tp [classes at: [fullTp last]]) (range (send 'all tp)) (j '0))
 		 ;; build int_bounds line...
 		 (while [j < [range size]]
 			(let ((atom ['A , atomN])) 
@@ -1952,7 +1958,7 @@
 			(set atomN [atomN + '1])
 			(set j [j + '1])
 			(if [atomN < intB] (set intBStr [intBStr , '", "]) 
-			    (set intBStr [intBStr , '"]"])))))
+			    (set intBStr [intBStr , '"]"]))))
 	     (set i [i + '1]))
       ;; a. fix known vars bounds and b. specify unknown vars bounds 
       (let ((vars [solverInfo at: 'vars]) (ks [vars keys]) (kss [ks size]) (j '0))
@@ -1964,7 +1970,7 @@
 		       (set itm ['r , relN]) (set relN [relN + '1])
 		       [oopta at: varN put: itm]
 		       [atoop at: itm put: varN]
-		       (if [val first]
+		       (if (and [[val isEmpty] not] [val first])
 			   ;; known var
 			   (set knownsBStr 
 			    [[[knownsBStr , [['"bounds " , itm] ,'": "]] , 
@@ -1979,8 +1985,20 @@
 			     (set unknownsBStr 
 				  [[unknownsBStr , [['"bounds " , itm] , 
 				   ['": [{}, " , [[listDom , '"->"] , listRan]]]] , '"]\n"]))))))
-	       (set j [j + '1])))      
-      [solverInfo at: 'universe put: atomN]      
+	       (set j [j + '1])))
+      [solverInfo at: 'universe put: atomN]
+      [solverInfo println]
+      [Array with: atomN with: knownsBStr withAll: 
+	     [Array with: unknownsBStr with: intBStr withAll:
+		    [Array with: functionsBStr]]])))
+
+(define compile-to-solver-source
+  (lambda (obj compiledGoalName asmParts)
+    (let ((objName [obj name]) (atomN [asmParts at: '0]) (knownsBStr [asmParts at: '1])
+	  (unknownsBStr [asmParts at: '2]) (intBStr [asmParts at: '3]) 
+	  (functionsBStr [asmParts at: '4])
+	  (asm [['"solver: \"" , [solverInfo at: 'solver]] , 
+		'"\"\nsymmetry_breaking: 3\nflatten: false\n"]))      
       (set asm [asm , [['"bit_width: " , [[[[solverInfo at: 'bounds] at: 'Integer]
 					   ceilLogn: '2] asString]] , '"\n"]])
       (set asm [asm , [['"univ: u" , [atomN asString]] , '"\n"]])
@@ -2006,27 +2024,6 @@
 
 ;;;;;;;;;;;;;;;;;;;; compiled stuff ... ;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-(syntax collection-size-compiled
-	(lambda (node compiler)
-	  `[['"#(" , [,[node second] toString]] , '")"]))
-
-(syntax collection-count-compiled
-	(lambda (node compiler)
-	  `[[[['"#(" , [,[node third] toString]] , '"."] , ,[node second]] , '")"]))
-
-(syntax collection-indexing-compiled
-	(lambda (node compiler)
-	  `[[(make-string-w-parens ,[node third]) , '"."] , [,[node second] toString]]))
-
-(syntax collection-indices-compiled
-	(lambda (node compiler)
-	  `['u , [[,[node second] compiledList] size]]))
-
-(syntax collection-lastIndex-compiled
-	(lambda (node compiler)
-	  `['"u1@" , [[[[,[node second] compiledList] size] - '1] asString]]))	  
-
 (syntax quantify-clause-compiled
  	(lambda (node compiler)
 	  `(let ((quantifier ,[node second]) ;;'1 -> every ; '2 -> any
@@ -2043,10 +2040,8 @@
 (syntax send-compiled
         (lambda (node compiler)
 	  `(let ((origSlctr ,[node second])
-		 (slctr (if [[solverInfo at: 'compiled-msg-sends] includesKey: origSlctr]
-			    ['compiled_ , origSlctr]
-			    origSlctr)))
-	     (send slctr ,[node third] ,[node fourth]))))
+		 (slctr ['compiled_ , origSlctr]))
+	     (send slctr ,[node third] ,@[node fourth] ,[node fifth]))))
 
 (syntax filter-object-list-compiled
 	(lambda (node compiler)
@@ -2067,12 +2062,6 @@
 			     john-error)))
 		   (qualify-type-or-class Symbol ,[[['compiled_ , [node second]] , '_] , [node third]] ,[[node fourth] at: '0] ,[[node fourth] at: '1] ,[node fifth]))))))
 
-(define [List compiled]
-  'u21)
-
-(define [Symbol compiledList]
-  (let ((var [[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]]))
-    (send [var second] [var first] 0)))
 
 (define make-string-2
 	(lambda (x y)
@@ -2102,10 +2091,99 @@
 	(lambda (x y z)
 	  (make-string-3 '"(" (make-string-3 x y z) '")")))
 
-(define reset-solver-info
-  (lambda ()
-    [solverInfo at: 'unknowns put: [IdentityDictionary new]]
-    [solverInfo at: 'setNum put: '0]))
+(define [Compiled_Set with: str]
+  (let ((res [self new]))
+    [res string: str]
+    res))
+
+(define [Compiled_Set withSymbol: sym]
+  [self with: [sym asString]])
+
+(define [Object compiled_intValue]
+  (make-string-3-w-parens '"Int [" [self asString] '"]"))
+
+(define [Integer compiled_intValue]
+  [self asString])
+
+(define [Symbol compiled_intValue]
+  [self asString])
+
+(define [Compiled_Set compiled_intValue]
+  [self string])
+
+(define [Object compiled_sumValue]
+  (make-string-3-w-parens '"sum (" [self asString] '")"))
+
+(define [Compiled_Set compiled_sumValue]
+  [self string])
+
+(define [Integer compiled_sumValue]
+  [self asString])
+
+(define [List compiled]
+  [Compiled_Set withSymbol: 'u21])
+
+(define [List compiled_range]
+  [Compiled_Set withSymbol: 'u20])
+
+(define [Symbol compiledList]
+  (let ((var [[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]]))
+    (send [var second] [var first] 0)))
+
+(define [Object compiled_size]
+  [Compiled_Set with: [['"#(" , [self toString]] , '")"]])
+
+(define [List compiled_lastIndex]
+  [Compiled_Set with: ['"u1@" , [[[self size] - '1] asString]]])
+
+(define [List compiled_indices]
+  [Compiled_Set withSymbol: ['u , [self size]]])
+
+(define [List compiled_count: itm]
+  [Compiled_Set with: [[[['"#(" , [self toString]] , '"."] , itm] , '")"]])
+
+(define [List compiled_at: idx]
+  [[[idx compiled_intValue] , '"."] , [self toString]])
+
+(define [List compiled_from: i to: j]
+  (make-string-3-w-parens
+   (make-string-2-w-parens (make-string-3 '"{ " (make-string-3 i '" .. " j) '"} -> ") 
+			   [[self compiled_range] string])
+   '" & " [self toString]))
+
+(define [Symbol compiled_lastIndex]
+  [[self compiledList] compiled_lastIndex])
+
+(define [Symbol compiled_indices]
+  [[self compiledList] compiled_indices])
+
+(define [Object compiled_count: itm]
+  [Compiled_Set with: [[[['"#(" , [self toString]] , '"."] , itm] , '")"]])
+
+(define [Object compiled_at: idx]
+  [[[idx compiled_intValue] , '"."] , [self toString]])
+
+(define [Symbol compiled_from: i to: j]
+  (make-string-3-w-parens
+   (make-string-2-w-parens (make-string-3 '"{ " (make-string-3 i '" .. " j) '"} -> ") 
+			   [[[self compiledList] compiled_range] string])
+   '" & " [self toString]))
+
+(define [Object mathOp: op on: other]
+  (make-string-3-w-parens [self compiled_sumValue] op [other compiled_sumValue]))
+
+(define [Compiled_Set mathOp: op on: other]
+  [Compiled_Set with: (make-string-3-w-parens [self compiled_sumValue] op other)])
+
+(define [Compiled_Set compiled_indices]
+  [Compiled_Set with: (make-string-3 0 '" .. " [self compiled_size])])
+
+
+
+
+      
+
+
 
 ;; this grammar to parse john programs...
 
@@ -2170,6 +2248,7 @@ upon		   = 'upon' endword
 for		   = 'for' endword
 do	           = 'do' endword
 suchThat	   = '|' endword
+size               = 'size' endword
 satisfy		   = 'satisfy' endword
 solve		   = 'solve' endword
 select		   = 'select' endword
@@ -2235,7 +2314,9 @@ number	           = '-' magnitude
 		          <- [result negated]
 		   | magnitude
 		          <- result
-string	 	   = '"' ( !'"' char )* ->0 '"' spaces		
+numberCompiled     = number
+                          <- `',[result asString]
+string	 	   = '"' ( '\' 'n' <- '"\n"->0 | ( !'"' char )* ->0 ) '"' spaces		
 		          <- [[self @ '0] asString]
 stringExp	   = string
 		          <- `',result
@@ -2269,7 +2350,8 @@ nameExps           = nameExp->0 nameExp+->1
 symbol		   = number
   		   | name
 		   | string
-symbolCompiled     = symbol
+symbolCompiled     = number
+                   | symbol
                           <- [result asString]
 qualifiable        = type | name
 drawable	   = variable
@@ -2306,11 +2388,8 @@ primitiveValue	   = variable
 		   | constantValue
 primitiveValueCompiled = variable 
 		   | constantValueCompiled
-expressionValue    = setOfObjects | pickFromSetOfObjs | collectionCount | collectionSize
+expressionValue    = setOfObjects | pickFromSetOfObjs
 expressionValueCompiled = setOfObjectsCompiled | pickFromSetOfObjsCompiled 
-                   | collectionIdxingCompiled | collectionIdxsCompiled 
-                   | collectionLastIdxCompiled | collectionCountCompiled 
-                   | collectionSizeCompiled 
 propertyValNamePairs = primitiveValue->2 name->3
 			     <- `(send '= (send ',[self @ '3] john-which 0) ,[self @ '2])->1
 		       ( primitiveValue->2 name->3 
@@ -2347,22 +2426,6 @@ pickFromSetOfObjsCompiled = article propertyValNamePairsCompiled->1 (collectionC
 			     	 `(let ((l (filter-collection-by ,[self @ '0] ,[self @ '1])))
 				       [l randomOne])				     
 				     `[,[self @ '0] randomOne])
-collectionCount    = pound expr->0 in expr->1
-		          <- `[,[self @ '1] count: ,[self @ '0]]
-collectionSize     = pound unaryPrimitive->0
-		          <- `[,[self @ '0] size]
-collectionCountCompiled = (pound exprCompiled->0 in exprCompiled->1 | unaryPrimitiveCompiled->1 'count:' spaces exprCompiled->0)
-		          <- `(collection-count-compiled ,[self @ '0] ,[self @ '1]) 
-collectionSizeCompiled = pound unaryPrimitiveCompiled->0
-		          <- `(collection-size-compiled ,[self @ '0]) 
-collectionIdxingCompiled = unaryPrimitiveCompiled->0 at colon 
-                              (primitiveValueCompiled | exprCompiled->2 
-                                   <- `['Int , (make-string-w-brackets ,[self @ '2])])->1
-                          <- `(collection-indexing-compiled ,[self @ '0] ,[self @ '1])
-collectionIdxsCompiled = unaryPrimitive->0 'indices' spaces
-		          <- `(collection-indices-compiled ,[self @ '0]) 
-collectionLastIdxCompiled = unaryPrimitive->0 'lastIndex' spaces
-		          <- `(collection-lastIndex-compiled ,[self @ '0]) 
 slctrWithArg       = msgNamesAndArgVal+->3
                           <- (let ((argVals [[self @ '3] applyMsgsAndMap: [Array with: 'second]])
 				   (argMsgNames [[self @ '3] applyMsgsAndMap: [Array with: 'first]]))
@@ -2376,8 +2439,8 @@ msgSend		   = (at time number->2 | '' <- 0->2) unaryPrimitive->0
                         | nameExp->1 <- `(send ,[self @ '1] ,[self @ '0] ',[self @ '2])->0)+
 			 	   <- [self @ '0] 
 msgSendCompiled	   = (at time number->2 | '' <- 0->2) unaryPrimitiveCompiled->0 
-                        ( slctrWithArgCompiled->1 <- `(send-compiled ',[[self @ '1] at: '0] ,[self @ '0] ,@[[self @ '1] at: '1] ',[self @ '2])->0
-                        | nameExpCompiled->1 <- `(send-compiled ,[self @ '1] ,[self @ '0] ',[self @ '2])->0)+
+                        ( slctrWithArgCompiled->1 <- `(send-compiled ',[[self @ '1] at: '0] ,[self @ '0] ,[[self @ '1] at: '1] ',[self @ '2])->0
+                        | nameExpCompiled->1 <- `(send-compiled ,[self @ '1] ,[self @ '0] () ',[self @ '2])->0)+
 			 	   <- [self @ '0] 
 unaryPrimitive     = lparen expr->0 rparen
   		          <- [self @ '0]
@@ -2393,25 +2456,17 @@ primitive	   = multinaryPrimitive
 		   | unaryPrimitive
 primitiveCompiled = multinaryPrimitiveCompiled
 		   | unaryPrimitiveCompiled
-numberExprCompiled = number | collectionSizeCompiled | collectionCountCompiled
-                   | collectionIdxsCompiled | collectionLastIdxCompiled
-parenPrimitiveCompiled = numberExprCompiled
-                   | primitiveCompiled
-                          <- `(make-string-2 'sum (make-string-w-parens ,result))
 multExpr	   = (primitive->0 
 		          <- [self @ '0])->1
 		          (mathMultOp->2 primitive->3 
 			        <- `(send ',[self @ '2] ,[self @ '1] ,[self @ '3]) -> 1)*
   		          	       <- [self @ '1]
 multExprCompiled  = primitiveCompiled->1 !(mathMultOp|mathAddOp) | 
-                     ( (parenPrimitiveCompiled->0 
+                     ( (primitiveCompiled->0 
 		          <- [self @ '0])->1
-		          (mathMultOp->2 parenPrimitiveCompiled->3 
+		          (mathMultOp->2 primitiveCompiled->3 
 			        <- `(make-string-3-w-parens ,[self @ '1] ',[self @ '2] ,[self @ '3]) -> 1)* )
   		          	       <- [self @ '1]
-parenExprCompiled  = numberExprCompiled
-                   | exprCompiled
-                          <- `(make-string-2 'sum (make-string-w-parens ,result))
 expr	 	   = (multExpr->0 
 		          <- [self @ '0])->1
 		          (mathAddOp->2 multExpr->3 
@@ -2420,7 +2475,7 @@ expr	 	   = (multExpr->0
 exprCompiled	 	   = (multExprCompiled->0 
 		          <- [self @ '0])->1
 		          (mathAddOp->2 multExprCompiled->3 
-			        <- `(make-string-3-w-parens ,[self @ '1] ',[self @ '2] ,[self @ '3]) -> 1)*
+			        <- `[,[self @ '1] mathOp: ',[self @ '2] on: ,[self @ '3]] -> 1)*
   		          	       <- [self @ '1]
 higherOrderClause  = for (every | any)->0 variable->3 in expr->1 suchThat clauses->2
                           <- `(quantify-clause ',[self @ '0] ,[self @ '1] ,[self @ '2] ,[self @ '3])
@@ -2442,8 +2497,8 @@ clause	     	   = not clause->0
 clauseCompiled     = not clauseCompiled->0
 		          <- `(not ,[self @ '0])
 		   | higherOrderClauseCompiled
-  		   | parenExprCompiled->0 mathCompOp->1 parenExprCompiled->2
-		          <- `(make-string-3-w-parens ,[self @ '0] ',[self @ '1] ,[self @ '2])
+  		   | exprCompiled->0 mathCompOp->1 exprCompiled->2
+                          <- `(make-string-3-w-parens [,[self @ '0] compiled_sumValue] ',[self @ '1] [,[self @ '2] compiled_sumValue])
   		   | exprCompiled->0 in exprCompiled->1
 		          <- `[,[self @ '1] includes: ,[self @ '0]]
                    | lparen clausesCompiled->0 rparen
@@ -2531,7 +2586,7 @@ qualify            = 'qualify' endword <- `(let())->4
                               <- [Expression withAll: [self @ '4] with: `(qualify-type-or-class ,[self @ '0] ,[self @ '1] ,[[self @ '2] at: '0] ,[[self @ '2] at: '1] ,[self @ '3])]->4 (comma|!!dot))+ 
                                   <- [self @ '4]
 qualifyCompiled    = 'qualify' endword <- `(let())->4
-                        qualifiable->0 (name->1 !colon <- 0->3 | nameAndVariable+->3 <- [[[self @ '3] applyMsgsAndMap: [Array with: 'first]] toSymbol]->1) <- [[solverInfo at: 'compiled-msg-sends] at: [self @ '1] put: '1]
+                        qualifiable->0 (name->1 !colon <- 0->3 | nameAndVariable+->3 <- [[[self @ '3] applyMsgsAndMap: [Array with: 'first]] toSymbol]->1)
                      // for compiled ver also define-send compiled_<type>_<name> for the symbol type!
                           (qualifyValPredCompiled->2
                               <- [Expression withAll: [self @ '4] with: `(let () (extra-qualify-for-symbol-compiled ,[self @ '0] ,[self @ '1] ,[self @ '2] ,[self @ '3]) (qualify-type-or-class ,[self @ '0] ,['compiled_ , [self @ '1]] ,[[self @ '2] at: '0] ,[[self @ '2] at: '1] ,[self @ '3]))]->4 (comma|!!dot))+ 

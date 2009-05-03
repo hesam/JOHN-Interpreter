@@ -4,7 +4,7 @@
 bound Integer [0,30].
 class AList: 30 Integer List inp, out.
 qualify List sorted if for all I in (its indices - its lastIndex) | it at: I <= it at: (I + 1).
-qualify List permutationOf: L if for all E in all Integer | it count: E =  L count: E.
+qualify List permutationOf: L if for all E in all Integer | it count: E = L count: E.
 qualify AList sorted if its out permutationOf: (its inp) and its out sorted.
 goal AList sort it sorted.
 
