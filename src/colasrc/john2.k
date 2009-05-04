@@ -2131,8 +2131,15 @@
 (define [Object compiled_size]
   [Compiled_Set with: [['"#(" , [self toString]] , '")"]])
 
+(define [List compiled_first]
+  [self compiled_at: '0])
+
+(define [List compiled_last]
+  [self compiled_at: [self lastIndex]])
+
 (define [List compiled_lastIndex]
-  [Compiled_Set with: ['"u1@" , [[[self size] - '1] asString]]])
+  ['A , [[self size] - '1]])
+;  [Compiled_Set with: ['"u1@" , [[[self size] - '1] asString]]])
 
 (define [List compiled_indices]
   [Compiled_Set withSymbol: ['u , [self size]]])
@@ -2144,11 +2151,13 @@
   [[[idx compiled_intValue] , '"."] , [self toString]])
 
 (define [List compiled_from: i to: j]
-  [Compiled_Set with:  
-    (make-string-w-parens
-      [[[[[[[[['"({ [ S0: one " , [[self compiled_indices] string]] , '" ] | sum(S0) >= "] ,
-	   [i toString]] , '" && sum(S0) <= "] , [j toString]] , '" })->"] , 
-        [[self compiled_range] string]] , '" & "] , [self toString]])])
+  (let ((setNum [solverInfo at: 'setNum]) (setVar ['S , setNum]))
+    [solverInfo at: 'setNum put: [setNum + '1]]
+    [Compiled_Set with:  
+		  (make-string-w-parens
+		   [[[[[[[[[[['"({ [ " , setVar] , '": one "] , [[self compiled_indices] string]] , [['" ] | sum(" , setVar] , '") >= "]] ,
+			  [i compiled_sumValue]] , [['" && sum(" , setVar] , '") <= "]] , [j compiled_sumValue]] , '" })->"] , 
+		      [[self compiled_range] string]] , '" & "] , [self toString]])]))
 
 (define [Object compiled_sum]
   (let ((bound [[[solverInfo at: 'bounds] at: 'Integer] - '1]) (i '1) (exp '"( ")
@@ -2162,8 +2171,15 @@
 (define [Symbol compiledList_size]
   [[[[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]] at: '2] at: '1])
 
+(define [Symbol compiled_first]
+  [self compiled_at: 'A0])
+
+(define [Symbol compiled_last]
+  [self compiled_at: [self compiled_lastIndex]])
+
 (define [Symbol compiled_lastIndex]
-  [Compiled_Set with: ['"u1@" , [[[self compiledList_size] - '1] asString]]])
+  ['A , [[self compiledList_size] - '1]])
+;  [Compiled_Set with: ['"u1@" , [[[self compiledList_size] - '1] asString]]])
 ;  [[self compiledList] compiled_lastIndex])
 
 (define [Symbol compiled_indices]
@@ -2177,11 +2193,14 @@
   [[[idx compiled_intValue] , '"."] , [self toString]])
 
 (define [Symbol compiled_from: i to: j]
-  [Compiled_Set with: 
-    (make-string-w-parens
-      [[[[[[[[['"({ [ S0: one " , [[[self compiledList] compiled_indices] string]] , 
-	    '" ] | sum(S0) >= "] , [i compiled_sumValue]] , '" && sum(S0) <= "] , [j compiled_sumValue]] , '" })->"] , 
-       [[[self compiledList] compiled_range] string]] , '" & "] , [self toString]])])
+  (let ((setNum [solverInfo at: 'setNum]) (setVar ['S , setNum]))
+    [solverInfo at: 'setNum put: [setNum + '1]]
+    [Compiled_Set with:  
+		  (make-string-w-parens
+		   [[[[[[[[[[['"({ [ " , setVar] , '": one "] , [[[self compiledList] compiled_indices] string]] , [['" ] | sum(" , setVar] , '") >= "]] ,
+			  [i compiled_sumValue]] , [['" && sum(" , setVar] , '") <= "]] , [j compiled_sumValue]] , '" })->"] , 
+		      [[[self compiledList] compiled_range] string]] , '" & "] , [self toString]])]))
+
 
 (define [Object mathOp: op on: other]
   [Compiled_Set with: (make-string-3-w-parens [self compiled_sumValue] op [other compiled_sumValue])])

@@ -1,14 +1,14 @@
 { john-program }
 
-bound Integer [0,20].
+bound Integer [0,100].
 
 ;; MEANING ;;;;;;;;;;;;;
-class TextBox: Integer width, 20 Integer List words, 5 Integer List lineBreaks.
+class TextBox: Integer width, 20 Integer List words, 6 Integer List lineBreaks.
 qualify List sorted if for all I in (its indices - its lastIndex) | it at: I <= it at: (I + 1).
 qualify List elementsUnique if for all E in all Integer | it count: E <= 1.
-qualify TextBox fLineBreaks [-1] + its lineBreaks + (its words lastIndex).
-
 qualify TextBox laidout if its lineBreaks size > 0 and
+                           its lineBreaks first = 0 and
+			   its lineBreaks last = its words lastIndex and
                            (for all I in its lineBreaks indices - its lineBreaks lastIndex | 
                              (its words from: ((its lineBreaks at: I) + 1) 
 			                  to: (its lineBreaks at: (I+1))) sum <= its width) and
@@ -25,7 +25,7 @@ visual TextBox for all W in its words do draw W (its spacingAt: Index).
 
 ;; TEST ;;;;;;;;;;;;;;;;
 ;[this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled]
-make TextBox Text 20 [4,2,3,3,10,4,3,3,4,3,5,2,10,9,4,4,5,2,2,7] []. ;[3,6,10,12,15].
+make TextBox Text 20 [4,2,3,3,10,4,3,3,4,3,5,2,10,9,4,4,5,2,2,7] []. ;[3,6,10,12,15,19].
 ;Text layout-init.
 Text solve layout.
 
