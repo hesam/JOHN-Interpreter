@@ -1949,43 +1949,48 @@
       [solverInfo at: 'setNum put: '0]
       ;; figure out total universe atoms...
       (while [i < [varTypesK size]]
-	     (let ((k [varTypesK at: i]) (fullTp [varTypes at: k])
-		   (tp [classes at: [fullTp last]]) (range (send 'all tp)) (j '0))
-		 ;; build int_bounds line...
-		 (while [j < [range size]]
-			(let ((atom ['A , atomN])) 
-			  [oopta at: atomN put: atom] [atoop at: atom put: atomN])
-			(set intBStr [intBStr , [['"{A" , [atomN asString]] , '"}"]])
-			(set atomN [atomN + '1])
-			(set j [j + '1])
-			(if [atomN < intB] (set intBStr [intBStr , '", "]) 
-			    (set intBStr [intBStr , '"]"]))))
+	     (let ((k [varTypesK at: i]))
+	       (if [k = 'Integer]
+		   (let ((fullTp [varTypes at: k])
+			 (tp [classes at: [fullTp last]]) (range (send 'all tp)) (j '0))
+		   ;; build int_bounds line...
+		   (while [j < [range size]]
+			  (let ((atom ['A , atomN])) 
+			    [oopta at: atomN put: atom] [atoop at: atom put: atomN])
+			  (set intBStr [intBStr , [['"{A" , [atomN asString]] , '"}"]])
+			  (set atomN [atomN + '1])
+			  (set j [j + '1])
+			  (if [atomN < intB] (set intBStr [intBStr , '", "]) 
+			      (set intBStr [intBStr , '"]"]))))))
 	     (set i [i + '1]))
       ;; a. fix known vars bounds and b. specify unknown vars bounds 
       (let ((vars [solverInfo at: 'vars]) (ks [vars keys]) (kss [ks size]) (j '0))
+	[vars println]
 	(while [j < kss]
 	       (let ((varN [ks at: j]) (var [vars at: varN]) (fullTp [var third]) 
-		     (tp [fullTp first]) (val (send [var second] [var first] 0)) (itm 0))
-		 (if (== tp 'List) ;; fixme
-		     (let () 
-		       (set itm ['r , relN]) (set relN [relN + '1])
-		       [oopta at: varN put: itm]
-		       [atoop at: itm put: varN]
-		       (if (and [[val isEmpty] not] [val first])
-			   ;; known var
-			   (set knownsBStr 
-			    [[[knownsBStr , [['"bounds " , itm] ,'": "]] , 
-			      (translate-oop-val-to-solver-val val)] , '"\n"])
-			   ;; unknown var
-			   (let ((listB (translate-list-bounds [fullTp second] [fullTp third]))
-				 (listDom [listB first]) (listRan [listB second]))
-			     [unknowns at: itm put: [Array with: obj with: [var second]]]
-			     (set functionsBStr [functionsBStr , 
-				    [[[['"FUNCTION(" , itm] , '", "] , 
-				      [[listDom , '"->one "] , listRan]] , '") &&\n"]])
-			     (set unknownsBStr 
-				  [[unknownsBStr , [['"bounds " , itm] , 
-				   ['": [{}, " , [[listDom , '"->"] , listRan]]]] , '"]\n"]))))))
+		     (tp [fullTp first]))
+		 (if (== [fullTp last] 'Integer)
+		     (let ((val (send [var second] [var first] 0)) (itm 0))
+		       (if (== tp 'List) ;; fixme
+			   (let () 
+			     (set itm ['r , relN]) (set relN [relN + '1])
+			     [oopta at: varN put: itm]
+			     [atoop at: itm put: varN]
+			     (if (and [[val isEmpty] not] [val first])
+				 ;; known var
+				 (set knownsBStr 
+				      [[[knownsBStr , [['"bounds " , itm] ,'": "]] , 
+					(translate-oop-val-to-solver-val val)] , '"\n"])
+				 ;; unknown var
+				 (let ((listB (translate-list-bounds [fullTp second] [fullTp third]))
+				       (listDom [listB first]) (listRan [listB second]))
+				   [unknowns at: itm put: [Array with: obj with: [var second]]]
+				   (set functionsBStr [functionsBStr , 
+						       [[[['"FUNCTION(" , itm] , '", "] , 
+							 [[listDom , '"->one "] , listRan]] , '") &&\n"]])
+				   (set unknownsBStr 
+					[[unknownsBStr , [['"bounds " , itm] , 
+							  ['": [{}, " , [[listDom , '"->"] , listRan]]]] , '"]\n"]))))))))
 	       (set j [j + '1])))
       [solverInfo at: 'universe put: atomN]
       [solverInfo println]
@@ -2054,14 +2059,17 @@
 (syntax extra-qualify-for-symbol-compiled 
         (lambda (node compiler)
 	  (let ((sendArgs (if [node fifth] [[node fifth] applyMsgsAndMap: [Array with: 'second]] '())))
-	    `(if [',[node second] ~= 'Symbol] 
-		 (let ()
-		   (if (not [Symbol understands: ',['compiled_ , [node third]]]) 
-		       (define-send ',['compiled_ , [node third]] Symbol ,@sendArgs
-			 (if [[solverInfo at: 'atoop] includesKey: self]
-			     (send [['compiled_ , [[[[[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]] third] first] , '_]] , ',[node third]] self ,@sendArgs)
-			     john-error)))
-		   (qualify-type-or-class Symbol ,[[['compiled_ , [node second]] , '_] , [node third]] ,[[node fourth] at: '0] ,[[node fourth] at: '1] ,[node fifth]))))))
+	    `(let ()
+	       (let ()		 
+		 (qualify-type-or-class Compiled_Set ,['compiled_ , [node third]] ,[[node fourth] at: '0] ,[[node fourth] at: '1] ,[node fifth]))
+	       (if [',[node second] ~= 'Symbol] 
+		   (let ()
+		     (if (not [Symbol understands: ',['compiled_ , [node third]]]) 
+			 (define-send ',['compiled_ , [node third]] Symbol ,@sendArgs
+			   (if [[solverInfo at: 'atoop] includesKey: self]
+			       (send [['compiled_ , [[[[[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]] third] first] , '_]] , ',[node third]] self ,@sendArgs)
+			       john-error)))
+		     (qualify-type-or-class Symbol ,[[['compiled_ , [node second]] , '_] , [node third]] ,[[node fourth] at: '0] ,[[node fourth] at: '1] ,[node fifth])))))))
 
 
 (define make-string-2
