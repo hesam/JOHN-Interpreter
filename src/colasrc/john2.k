@@ -12,7 +12,7 @@
 ;;;                                                               			     ;;;
 ;;; Version:       # 2.0                                      			             ;;;
 ;;; Revision:      # 1.0                                      			             ;;;
-;;; Last Update:   05-04-2009								     ;;; 
+;;; Last Update:   05-05-2009								     ;;; 
 ;;;                                                               			     ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -333,6 +333,9 @@
 
 (define [List lastIndex]
   [[self size] - '1])
+
+(define [List sizes]
+  [self mapMsg: 'size])
 
 ;; returns the keys in dictionary with min or max value
 ;; isMin should be set to true for min case, false for max case
