@@ -1,0 +1,342 @@
+{ john-program }
+; comment
+2.
+2 .
+/;
+comment1
+  comment2
+  ;/
+3 + 4.
+1 + 2 * 4.
+(1 + 2) * 4.
+3 - 2 - 8.
+5 ** 2.
+3-2.
+3- 2.
+3 -2.
+hi.
+hi + 2.
+hi * 4.
+"hi blah".
+"a b" + " c" + " d".
+"hi there" + you.
+"hi blah " * 3.
+-3 abs squared.
+[ aa, b , ( 2 + 3 ) ].
+{ 1 ,{ 2, 3 } , 4, aa, b, c }.
+[ hi, u ].
+[ { 1, 2 }, { 3, 4 }, 5 ].
+[ { 1, 2 }, { 3, 4 }, 5 ] second.
+[ a, b, c, d, e, f ] at: 4.
+[ a, b, c, d, e, f ] from: 4 to: 5.
+[ a, b, c, d, e, f ] from: 3.
+[ a, b, c, d, e, f ] to: 3.
+([ a, b, c, d, e, f ] at: 4) * 2.
+one from [ a, b, c ].
+{ 2, 3, 4 } size.
+{ }.
+{ 1 } + { 5 }.
+{ 1 } + 5.
+{ } + 5.
+{ 2, 3 } + { 3, 4 }.
+{ 3 } + [ 4 ].
+[ ] + 1.
+[ b ] + [ aa, b ].
+[ { 3 } ] + { 2 }.
+{ 3, 4 } - 4.
+{ 3, 4 } - { 4, 1 }.
+[ 3, 4, 5, 3 ] - [ 3, 6 ].
+[ 3, 4 ] - [ 4, 1 ].
+{ aa, b } * { c }.
+[ aa, b, c ] * [ d, e ].
+[ aa, b, c ] * [ d, e ] * [ 2, 3 ].
+{ v } * { }.
+[2, 3, 4, 5] rest.
+yes.
+no.
+is 1 = 2.
+is 1 = 1.
+is 3 = 2 + 2 - 1.
+is not 1 = 1.
+is 2 = 2 and 2 = 3.
+is 2 = 2 or 2 = 3.
+is 2 = 2 or 2 / 0 = 1.
+;is 2 = 2 and 2 / 0 = 1.
+;is 2 / 0 = 1.
+;2 / 0.
+is 1 = 2 or 3 = 1 or 3 = 2 + 1.
+is -3 abs squared = 3 squared.
+is 4 in { 3, 4, 5 }.
+is 6 in [ 3, 4, 5 ] + [ 5, 6 ].
+is 2 in [[2,1],[1,2],[2,2]].
+is [1,1] in [[2,1],[1,2],[2,2]].
+is [2,2] in [[2,1],[1,2],[2,2]].
+is [2] in {[1],[2],[3]}.
+is for any X in [ [d,e], [f,g] ] | e in X.
+is for all Y in { 3,11,15 } | Y > 10.
+is for any Item in [ c,d ] | Item in [d,e].
+is for all X in [ c,d ] | X in [d,e].
+select [ aa, b, c ] by which = c or which = b.
+select { 1, 2, 3, 4 } by which <= 3.
+qualify Integer name uno if it = 1.
+qualify Integer name two if it = 2.
+qualify Word number 1 if it = uno.
+qualify Word number 2 if it = two.
+qualify Integer oneToN [ ] if it = 0.
+qualify Integer oneToN (it - 1) oneToN + it.
+qualify String doubled it * 2.
+qualify List cddr its rest rest.
+qualify List sorted if its size < 2.
+qualify List sorted if its first <= its second and
+	     	       its rest sorted.
+qualify Integer smallers select { 1, 2, 3, 4, 5, 6, 7, 8, 9 } by which < it.
+qualify Integer times: Num it * Num.
+qualify Integer times: N1 times: N2 it * N1 * N2.
+qualify Integer largest: Num it if it > Num.
+qualify Integer largest: Num Num if it <= Num.
+qualify Integer between-this: N1 and-this: N2 if it > N1 and it < N2. 
+1 name.
+2 name.
+3 name.
+uno number.
+two number.
+three number.
+[ 1, 2, 3 ] name.
+{ 1, 2, 3 } name size.
+[ uno, two ] number.
+[ uno, two ] number name.
+1 oneToN.
+7 oneToN.
+"uno two " doubled.
+4 smallers.
+5 smallers.
+4 times: 3.
+4 times: 3 times: 4.
+5 max: 3.
+3 max: 5.
+10 between-this: 12 and-this: 26.
+10 between-this: 5 and-this: 17.
+[ 2, 3, 4, 5 ] cddr.
+is [ 2, 3, 4 ] cddr = [ 4 ].
+is [ 4 ] sorted.
+[ 1, 4, 2 ] sorted.
+is [ 1, 4, 2 ] sorted.
+is [ 2, 4, 6 ] sorted = yes.
+[3, 4, 5] sorted.
+[3, 4, 5, 3] sorted.
+[ 4, 2, 3, 5, 3 ] unique.
+start-world w.
+class Person: Word firstName,lastName, Integer age.
+make Person Lu lu roberts 23.
+make Person Abe abe jones 15.
+Lu lastName.
+Abe age - Lu age.
+;; assignment
+Lu age.
+Lu age := 22.
+Lu age.
+class Dir: Integer blah,bloo, Set plab.
+qualify Dir blah-twice its blah * 2.
+qualify Dir blah: N its blah * N.
+make Dir Blah 2 3 { c, d }.
+Blah.
+Blah blah.
+Blah bloo.
+Blah plab.
+Blah blah-twice.
+Blah blah: 3.
+"Blah" object.
+"Blah" object blah.
+("Bl" + "ah") object blah.
+make Dir Hi 1 5 [ Blah, 5 ].
+Hi plab.
+Hi plab second.
+Hi plab first. 
+Hi plab first blah.
+for all X in [ "Up" name, "Dn" name, "Rt" name, "Lf" name ] do make Dir X 1 2 { aa, b }.
+Dn.
+Dn blah.
+Lf plab.
+[ Blah, Hi, Dn ] blah.
+{ Blah, Hi, Lf } blah.
+class Lego: sized color location.
+make Lego CubeR big red table.
+make Lego PyramidR small red table.
+make Lego CubeB small blue box.
+all Lego.
+a Lego.
+a Lego.
+a red color Lego.
+a red color Lego.
+a small sized blue color Lego.
+all table location Lego.
+class Col: Integer number.
+for [ [ "A" name, 1 ], [ "B" name, 2 ], [ "C" name, 3 ], [ "D" name, 4 ], [ "E" name, 5 ], [ "F" name, 6 ], [ "G" name, 7 ], [ "H" name, 8 ] ] do make Col (each first) (each second).
+all Col.
+E number.
+class Foo: Word n, List l, Set s, Bar h, Sentence str.
+class Bar: Integer val.
+qualify Bar odd if its val % 2 = 1.
+qualify Bar even if its val % 2 = 0.
+qualify Bar eqv: Bar2 if its val = Bar2 val. 
+qualify Bar doubled its val * 2.
+make Foo Myfoo 7 [ Up, Dn ] { c, d } 1 "hi there".
+Myfoo n.
+Myfoo str.
+Myfoo l.
+Myfoo s.
+make Bar B1 (1+11).
+make Bar B2 7.
+make Bar B3 12.
+B1 eqv: B2.
+B1 eqv: B3.
+B1 val.
+B1 val - 10.
+B1 odd.
+B1 even.
+B1 doubled.
+B2 odd.
+B2 even.
+make Foo F1 blah [ 1, 2, 3, hi, B1 ] { e1, e3 } B1 "que tal".
+make Foo F2 duh [ 1, 2, 3, 10 ] { e2 } B2 "a string".
+F1 n.
+F1 s.
+F1 s size.
+F1 l.
+(F1 l) at: 1.
+F1 l at: 1.
+F1 l size.
+F1 l fifth.
+F1 l fifth val.
+F1 l rest.
+F2 l sorted.
+F1 h.
+B1 val.
+F1 h val.
+F1 l * F2 l.
+select (F1 l) * (F2 l) by which = which.
+all Foo.
+{ blah, F1 }.
+{ blah, F1, f8 }.
+select all Foo by which s size < 2.
+7 random { aa, b, c, d, e, f, g, z }.
+one from { aa }.
+one from [ d, b ].
+1 random Bar.
+2 random (F1 l).
+2 random (F1 l).
+5 random Integer.
+a Bar.
+a [ 1,2,3 ].
+a Integer.
+a Integer.
+qualify Integer odd if it % 2 = 1.
+qualify Integer even if it % 2 = 0.
+4 odd.
+3 odd.
+is for all E in { 1, 3, 4 } | E odd.
+is for all E in { 5 } | E even.
+is for all E in { 5 } | E odd.
+is for all X in { 4 } | X even.
+is for any X in { 3 } | X even.
+is for all X in { } | X even.
+is for any X in { } | X even.
+is for any X in { 1, 2, 3, 4 } | X odd.
+;if for any X in Foo | hi in X l.
+F1 h.
+action Bar boo B consequence its val = its val * B.
+rule Bar boo is its val < 50.
+rule Bar boo is B odd.
+B1 val.
+time.
+B1 do boo 2.
+B1 val.
+B1 do boo 3.
+time.
+B1 val.
+B2 val.
+B1 do boo 4.
+B1 do boo 5.
+time.
+B1 val.
+B1 do boo 3.
+time.
+B1 val.
+Myfoo l at: 1.
+action Foo hoo consequence (its l at: 1) blah = yaha.
+Myfoo l at: 1.
+(Myfoo l at: 1) blah.
+Myfoo do hoo.
+(Myfoo l at: 1) blah.
+action Foo boo B C consequence its n = B and 
+       	       	 	       its h val = B + C and
+			       ;;its l = its l + [ blue ] if its l size < 5 and
+			       its l at 2 = boo and 
+			       (its n = its n + 1 and its n = its n + 1) if its n = 1.
+rule Foo boo is B even.
+rule Foo boo is C even = no.
+rule Foo boo is its l size > 0.
+F1 n.
+F1 h.
+F1 h val.
+F1 do boo 3 2.
+now.
+F1 l.
+F1 do boo 2 3.
+time.
+F1 l.
+at time 2 F1 l.
+F1 n.
+F1 h val.
+B1 val.
+F1 l.
+F1 do boo 4 5.
+F1 n.
+F1 l.
+time.
+at time 3 B1 val.
+at time 2 B1 val.
+at time 1 B1 val.
+at time 0 B1 val.
+draw hi there "blah". 
+at x 2 y 5 draw im here.
+for [ aa, b, c ] do draw each.
+visual Foo draw hi me collection contains (its l) okay bro.
+draw F1.
+draw uno F1 two. 
+visual Bar draw hi value esta (its val) and
+                for { aa, b, c } do draw each each each.
+draw B1.
+at x 1 y 1 draw aa b c B1 and at x 1 y 1 draw wassup F1.
+at x 2 y 10 draw aa b Myfoo.
+draw aa B1 b.
+draw B2.
+for all Bar do draw each.
+start-world w1.
+class Player: Player opponent.
+make Player White Black.
+make Player Gray Black.
+make Player Black White.
+White opponent.
+Gray opponent.
+Black opponent.
+White opponent opponent.
+Gray opponent opponent.
+
+class Piece: Square position.
+class Square: Piece contains.
+make Piece Pawn ("E2" object).
+make Square E2 Pawn.
+Pawn position.
+Pawn position contains.
+E2 contains position.
+group Human Boy Girl.
+class Boy: Integer age.
+class Girl: Integer age.
+qualify Human age-plus-10 its age + 10.
+make Boy Guy 14.
+make Girl Gal 9.
+Gal age.
+Gal age-plus-10 + Guy age-plus-10.
+
+end-world.
