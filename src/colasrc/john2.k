@@ -187,7 +187,9 @@
 (define-type GoalHeuristic Object (goal type weight expression))
 
 ;; used to represent sets in solver world...
-(define-type Compiled_Set Object (string))
+(define-type Compiled_Data Object (string))
+(define-type Compiled_Set Compiled_Data ())
+(define-type Compiled_Int Compiled_Data ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -401,10 +403,10 @@
 		       (set i [i + '1]))
 		john-true)))))
 
-(define [SmallInteger to: upper]
-  (let ((s [[upper - self] + '1]) (res [Array new: s]) (i '0))
+(define [Integer to: upper]
+  (let ((s [[upper - self] + '1]) (res [List new]) (i '0))
     (while [i < s]
-	   [res at: i put: [i + self]]
+	   [res add: [i + self]]
 	   (set i [i + '1]))
     res))
     
@@ -576,7 +578,7 @@
   (let ((p (if (== self john-false) john-no (if (== self john-true) john-yes self)))) ;; fixme
     [p asString]))
 
-(define [Compiled_Set asString]
+(define [Compiled_Data asString]
   [self string])
 
 (define [Object printlnMe]
@@ -2100,7 +2102,7 @@
 	(lambda (x y z)
 	  (make-string-3 '"(" (make-string-3 x y z) '")")))
 
-(define [Compiled_Set with: str]
+(define [Compiled_Data with: str]
   (let ((res [self new]))
     [res string: str]
     res))
@@ -2109,13 +2111,16 @@
   [self with: [sym asString]])
 
 (define [Object compiled_intValue]
-  (make-string-3-w-parens '"Int [" [self asString] '"]"))
+  [Compiled_Int with: (make-string-3-w-parens '"Int [" [self asString] '"]")])
+
+(define [Compiled_Int compiled_intValue]
+  self)
 
 (define [Integer compiled_intValue]
-  [self asString])
+  [Compiled_Int with: [self asString]])
 
 (define [Symbol compiled_intValue]
-  [self asString])
+  [Compiled_Int with: [self asString]])
 
 (define [Object compiled_sumValue]
   (make-string-3-w-parens '"sum (" [self asString] '")"))
@@ -2147,7 +2152,6 @@
 
 (define [List compiled_lastIndex]
   ['A , [[self size] - '1]])
-;  [Compiled_Set with: ['"u1@" , [[[self size] - '1] asString]]])
 
 (define [List compiled_indices]
   [Compiled_Set withSymbol: ['u , [self size]]])
@@ -2156,7 +2160,7 @@
   [Compiled_Set with: [[[['"#(" , [self toString]] , '"."] , itm] , '")"]])
 
 (define [List compiled_at: idx]
-  [[[idx compiled_intValue] , '"."] , [self toString]])
+  [Compiled_Int with: [[[[idx compiled_intValue] string] , '"."] , [self toString]]])
 
 (define [List compiled_from: i to: j]
   (let ((setNum [solverInfo at: 'setNum]) (setVar ['S , setNum]))
@@ -2187,18 +2191,15 @@
 
 (define [Symbol compiled_lastIndex]
   ['A , [[self compiledList_size] - '1]])
-;  [Compiled_Set with: ['"u1@" , [[[self compiledList_size] - '1] asString]]])
-;  [[self compiledList] compiled_lastIndex])
 
 (define [Symbol compiled_indices]
   [Compiled_Set withSymbol: ['u , [self compiledList_size]]])
-;  [[self compiledList] compiled_indices])
 
 (define [Object compiled_count: itm]
   [Compiled_Set with: [[[['"#(" , [self toString]] , '"."] , itm] , '")"]])
 
 (define [Object compiled_at: idx]
-  [[[idx compiled_intValue] , '"."] , [self toString]])
+  [Compiled_Int with: [[[[idx compiled_intValue] string] , '"."] , [self toString]]])
 
 (define [Symbol compiled_from: i to: j]
   (let ((setNum [solverInfo at: 'setNum]) (setVar ['S , setNum]))
@@ -2209,6 +2210,14 @@
 			  [i compiled_sumValue]] , [['" && sum(" , setVar] , '") <= "]] , [j compiled_sumValue]] , '" })->"] , 
 		      [[[self compiledList] compiled_range] string]] , '" & "] , [self toString]])]))
 
+(define [Integer compiled_to: j]
+  (let ((setNum [solverInfo at: 'setNum]) (setVar ['S , setNum])
+	(intB [[solverInfo at: 'bounds] at: 'Integer]) (intBVar ['u , intB]))
+    [solverInfo at: 'setNum put: [setNum + '1]]
+    [Compiled_Set with:   
+		  (make-string-w-parens
+		   [[[[[[[['"({ [ " , setVar] , '": one "] , intBVar] , [['" ] | sum(" , setVar] , '") >= "]] ,
+			  [self asString]] , [['" && sum(" , setVar] , '") <= "]] , [j compiled_sumValue]] , '" })"])]))
 
 (define [Object mathOp: op on: other]
   [Compiled_Set with: (make-string-3-w-parens [self compiled_sumValue] op [other compiled_sumValue])])
@@ -2557,7 +2566,7 @@ clauses	     	   = (clause->0
 clausesCompiled	   = (clauseCompiled->0 
 		          <- [self @ '0])->1
 		          (logicOpCompiled->2 clauseCompiled->3  
-                                <- `(make-string-3 ,[self @ '1] ',[self @ '2] ,[self @ '3]) -> 1)*
+                                <- `(make-string-3-w-parens ,[self @ '1] ',[self @ '2] ,[self @ '3]) -> 1)*
   		          	       <- [self @ '1]
 predicate	   = is clauses->0
   		          <- `(predicate ,[self @ '0])

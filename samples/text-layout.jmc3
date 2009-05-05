@@ -10,27 +10,19 @@ qualify List elementsUnique if for all E in all Integer | it count: E <= 1.
 qualify List length its sum + its size - 1.
 qualify TextBox lineAt: I its wordLs from: (its lineBreaks at: I) 
 			               to: (its lineBreaks at: (I+1) - 1).
-qualify TextBox blah its wordLs at: (its lineBreaks at: 0).
-/;
+qualify TextBox	wordNextLineLength: I its wordLs at: (its lineBreaks at: (I+1)).
+qualify TextBox optimallyLaidoutAt: I if (I = its lineBreaks size - 2) or 
+                ((its width - (its lineAt: I) length) <= (its wordNextLineLength: I)).
 qualify TextBox laidout if its lineBreaks size > 0 and
                            its lineBreaks first = 0 and
 			   its lineBreaks last = its wordLs size and
                            (for all I in its lineBreaks butLastIndices | 
-                              ((its lineAt: I) length <= its width) and
-			       (its width - (its lineAt: I) length) < 
-			        (its wordLs at: (its lineBreaks at: (I+1)))) and
-                           (its lineBreaks elementsUnique) and
-			   (its lineBreaks sorted).
-;/
-
-qualify TextBox laidout if its lineBreaks size > 0 and
-                           its lineBreaks first = 0 and
-			   its lineBreaks last = its wordLs size and
-                           (for all I in its lineBreaks butLastIndices | 
-                              (its lineAt: I) length <= its width) and
-                           (its lineBreaks elementsUnique) and
+                              (((its lineAt: I) length <= its width) and
+			       its optimallyLaidoutAt: I)) and
+			   (its lineBreaks elementsUnique) and
 			   (its lineBreaks sorted).
 
+			   
 goal TextBox layout it laidout.
 
 ;; OPTIMIZATIONS ;;;;;;;
@@ -43,9 +35,10 @@ visual TextBox for all W in its words do draw W (its spacingAt: Index).
 ;; TEST ;;;;;;;;;;;;;;;;
 ;[this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled]
 make TextBox Text 20 [this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled] [4,2,3,3,10,4,3,3,4,3,5,2,10,9,4,4,5,2,2,7] []. ;[0,4,7,11,13,16,20].
-Text layout-init.
-;Text solve layout.
-;draw Text.
+;Text layout-init.
+Text solve layout.
+draw Text.
+Text lineBreaks.
 /;
 
 this is one too 
