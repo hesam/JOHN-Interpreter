@@ -1,10 +1,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;											     ;;;
-;;;  JOHN Language Interpreter -                     					     ;;;
+;;;  JOHN Language Interpreter (v2)                    					     ;;;
 ;;;                                                               			     ;;;
-;;;  JOHN 2 uses Kodkod to solve the goals of objects       	                             ;;;
-;;;  (http://www.advicetaker.org/pmwiki/pmwiki.php)                                          ;;;
+;;;  JOHN2 compiles problems into 1st order relational logic and uses                        ;;;
+;;;  KodKod solver (http://alloy.mit.edu/kodkod/) to solve them and then                     ;;;
+;;;  decode the solution back to the object world...                                         ;;;
+;;;                                                               			     ;;;
+;;;  Documentation:       http://www.advicetaker.org/pmwiki/pmwiki.php                       ;;;
 ;;;                                                               			     ;;;
 ;;;  COLA Version: running directly on COLA objects					     ;;;
 ;;;                                                               			     ;;;
@@ -12,7 +15,7 @@
 ;;;                                                               			     ;;;
 ;;; Version:       # 2.0                                      			             ;;;
 ;;; Revision:      # 1.0                                      			             ;;;
-;;; Last Update:   05-05-2009								     ;;; 
+;;; Last Update:   05-06-2009								     ;;; 
 ;;;                                                               			     ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -21,13 +24,16 @@
 ;;; Instructions:								 	     ;;;
 ;;;   1. Start your program with line:							     ;;;
 ;;;         { john-program }								     ;;;
-;;;   2. Run the interpreter, replacing <program filename> to the full name of your program: ;;;
+;;;   2. Run the interpreter, replacing $IDST with path of COLA idst directory and           ;;;
+;;;      <program filename> with the full name of your program:                              ;;;
 ;;;   	 (the dash at the end needed for interactive interpreter upon loading of your file)  ;;;
-;;;   	    idst/function/jolt2/main idst/function/jolt2/boot.k john2.k <program filename> - ;;;
+;;;   	  $IDST/function/jolt2/main $IDST/function/jolt2/boot.k john2.k <program filename> - ;;;
 ;;;   3. To start interactive after running the file, in cola interpreter type:              ;;;
 ;;;   	    { john-program }    	    	    		 		             ;;;
 ;;;   	     		 					       			     ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define solverPath '"/Users/hesam/Desktop/Research/tools/Kodkod/kodkodi-1.1.4")
 
 ;; importing define-type into jolt2 from jolt ;; fixme
 (load "define-type.k")
@@ -51,7 +57,10 @@
 [john-opts at: 'auto-draw put: 0] ;; if set to an object, draws that object upon an action
 [john-opts at: 'two-player-game put: 0] ;; if set, does minimax searches (for 2-player games)
 [john-opts at: 'solver put: '"MiniSat"] ;; solver engine used 
-[john-opts at: 'solver-cmd-line put: '"java -cp /Users/hesam/Desktop/Research/tools/Kodkod/kodkodi-1.1.4/jar/kodkodi-1.1.4.jar:/Users/hesam/Desktop/Research/tools/Kodkod/kodkodi-1.1.4/jar/antlr-runtime-3.1.1.jar:/Users/hesam/Desktop/Research/tools/Kodkod/kodkodi-1.1.4/../kodkod.jar -Djava.library.path=/Users/hesam/Desktop/Research/tools/Kodkod/kodkodi-1.1.4/../x86-mac de/tum/in/isabelle/Kodkodi/Kodkodi < "] ;; cmdline for solver
+[john-opts at: 'solver-cmd-line put: [[[[['"java -cp " , solverPath] , 
+  ['"/jar/kodkodi-1.1.4.jar:" , solverPath] ] , '"/jar/antlr-runtime-3.1.1.jar:"] , 
+    [solverPath , '"/../kodkod.jar -Djava.library.path="]] , 
+      [solverPath , '"/../x86-mac de/tum/in/isabelle/Kodkodi/Kodkodi < "]]] ;; cmdline for solver
 
 ;; constants
 (define john-pipes '"|")
@@ -1998,16 +2007,17 @@
 							  ['": [{}, " , [[listDom , '"->"] , listRan]]]] , '"]\n"]))))))))
 	       (set j [j + '1])))
       [solverInfo at: 'universe put: atomN]
+      [solverInfo at: 'knownsBStr put: knownsBStr]
       [solverInfo println]
-      [Array with: atomN with: knownsBStr withAll: 
-	     [Array with: unknownsBStr with: intBStr withAll:
-		    [Array with: functionsBStr]]])))
+      [Array with: atomN with: unknownsBStr withAll: 
+	     [Array with: intBStr with: functionsBStr]])))
 
 (define compile-to-solver-source
   (lambda (obj compiledGoalName asmParts)
-    (let ((objName [obj name]) (atomN [asmParts at: '0]) (knownsBStr [asmParts at: '1])
-	  (unknownsBStr [asmParts at: '2]) (intBStr [asmParts at: '3]) 
-	  (functionsBStr [asmParts at: '4])
+    (let ((objName [obj name]) (atomN [asmParts at: '0]) 	  
+	  (unknownsBStr [asmParts at: '1]) (intBStr [asmParts at: '2]) 
+	  (functionsBStr [asmParts at: '3]) (CompiledGoalStr (send compiledGoalName obj))
+	  (knownsBStr [solverInfo at: 'knownsBStr])
 	  (asm [['"solver: \"" , [solverInfo at: 'solver]] , 
 		'"\"\nsymmetry_breaking: 3\nflatten: false\n"]))      
       (set asm [asm , [['"bit_width: " , [[[[solverInfo at: 'bounds] at: 'Integer]
@@ -2017,7 +2027,7 @@
       (set asm [asm , unknownsBStr])
       (set asm [[asm , intBStr] , '"\n"])
       (set asm [asm , functionsBStr])
-      (set asm [[asm , (send compiledGoalName obj)] , '";\n"])
+      (set asm [[asm , CompiledGoalStr] , '";\n"])
       [solverInfo println]
       [asm putln]
       (let ((asmFileN [['"/tmp/John." , [objName , ['. , compiledGoalName]]] , '".kki"])
@@ -2135,7 +2145,12 @@
   [self asString])
 
 (define [List compiled]
-  [Compiled_Set withSymbol: 'u21])
+  (let ((vars [solverInfo at: 'vars]) (ks [[vars keys] size])
+	(knownsBStr [solverInfo at: 'knownsBStr]) (itm ['r , ks]))
+    [solverInfo at: 'knownsBStr put:
+		[[[knownsBStr , [['"bounds " , itm] ,'": "]] , 
+		  (translate-oop-val-to-solver-val self)] , '"\n"]]
+  [Compiled_Set withSymbol: itm]))
 
 (define [List compiled_range]
   [Compiled_Set withSymbol: 'u20])
