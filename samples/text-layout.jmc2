@@ -16,12 +16,11 @@ qualify TextBox optimallyLaidoutAt: I if (I = its lineBreaks size - 2) or
 qualify TextBox laidout if its lineBreaks size > 0 and
                            its lineBreaks first = 0 and
 			   its lineBreaks last = its wordLs size and
-                           (for all I in its lineBreaks butLastIndices | 
-			        (((its lineAt: I) length <= its width) and 
-			        (its optimallyLaidoutAt: I))) and
 			   (its lineBreaks elementsUnique) and
-			   (its lineBreaks sorted).
-
+			   (its lineBreaks sorted) and
+			   (for all I in its lineBreaks butLastIndices | 
+			        (((its lineAt: I) length <= its width) and 
+			        (its optimallyLaidoutAt: I))).
 			   
 goal TextBox layout it laidout.
 
@@ -34,12 +33,11 @@ visual TextBox draw ("." * 20) "\n" and
 	       draw "\n" ("." * 20).
 
 ;; TEST ;;;;;;;;;;;;;;;;
-make TextBox Text 20 [this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled] [] []. ;[0,4,7,11,13,16,20].
+make TextBox Text 20 [this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled] [] [].
 Text wordLs := Text words sizes.
-;Text layout-init.
-Text solve layout.
-Text lineBreaks.
-draw Text.
+;Text solve layout.
+;Text lineBreaks.
+;draw Text.
 /;
 
 this is one too 
