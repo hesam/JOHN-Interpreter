@@ -21,7 +21,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;											     ;;;
-;;; Instructions:								 	     ;;;
+;;; Running Instructions:							      	     ;;;
 ;;;   1. Start your program with line:							     ;;;
 ;;;         { john-program }								     ;;;
 ;;;   2. Run the interpreter, replacing $IDST with path of COLA idst directory and           ;;;
@@ -32,8 +32,6 @@
 ;;;   	    { john-program }    	    	    		 		             ;;;
 ;;;   	     		 					       			     ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define solverPath '"/Users/hesam/Desktop/Research/tools/Kodkod/kodkodi-1.1.4")
 
 ;; importing define-type into jolt2 from jolt ;; fixme
 (load "define-type.k")
@@ -52,6 +50,7 @@
 (define Date (import "Date"))
 
 ;; interpreter settings
+(define solverPath '"../solver/Kodkod/kodkodi-1.1.4")
 (define john-opts [IdentityDictionary new])
 [john-opts at: 'max-time-ahead put: '5] ;; max search tree depth to go
 [john-opts at: 'auto-draw put: 0] ;; if set to an object, draws that object upon an action
