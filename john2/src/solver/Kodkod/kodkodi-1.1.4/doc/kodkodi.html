@@ -1,0 +1,727 @@
+<html>
+<head>
+  <title>Kodkodi User's Guide</title>
+  <style type="text/css">
+a:link { color: #4866FF; text-decoration: none }
+a:visited { color: #4866FF; text-decoration: none }
+a:active {  color: #88A6FF; text-decoration: none }
+body {
+  font-family: Geneva, Arial, Helvetica, sans-serif;
+  font-size: 12pt;
+}
+tt, pre {
+  font-family: Courier;
+  font-size: 11pt;
+}
+table tr.odd {
+  background: #f0f0f0;
+}
+table tr.even {
+  background: #e4e4e4;
+}
+body pre {
+  padding: .5em;
+  border: #d7d7d7 1px solid;
+  background: #f1f1f1;
+  color: #181818;
+}
+  </style>
+</head>
+<body>
+<h1>Kodkodi User Manual</h1>
+
+<h2>About Kodkodi 1.1.4</h2>
+
+<p>
+Kodkodi 1.1.4 (March 17, 2009) is a front-end for the Java library
+<a href="http://alloy.mit.edu/kodkod/">Kodkod</a>, a SAT-based
+solver for first-order logic with relations, transitive closure, and partial
+instances. Kodkod forms the basis of
+<a href="http://alloy.mit.edu/alloy4/">Alloy Analyzer version 4</a>. The Kodkodi
+front-end is designed to make the Kodkod library available to other programming
+languages than Java. Kodkodi is developed and maintained by
+<a href="http://www4.in.tum.de/~blanchet/">Jasmin Christian Blanchette</a> at
+the Technische Universit&auml;t M&uuml;nchen.
+</p>
+
+<h2>Requirements</h2>
+
+<p>
+Kodkodi requires the runtimes for ANTLR 3.1.1 and the Nov. 27, 2008 version of
+Kodkod to be located in the Java classpath. Both are bundled with Kodkodi. In
+addition, you will need to install a SAT solver. Follow the instructions on
+<a href="http://alloy.mit.edu/kodkod/">Kodkod's home page</a>, or use the
+platform-independent (but apparently slower) SAT4J solver bundled with Kodkodi.
+To run the program, you simply need a Java 1.5 virtual machine (normally called
+<tt>java</tt>). To recompile it, you need a Java compiler and the ANTLR parser
+generator tools.
+</p>
+
+<h2>Usage</h2>
+
+<p>
+The <tt>kodkodi</tt> program takes its input from standard input and writes its
+output to standard output (on success) or standard error (on failure). Examples
+are provided in the <tt>examples</tt> directory.
+</p>
+
+<pre>
+Usage: kodkodi [options]
+options:
+  -help               Show usage and exit
+  -verbose            Produce more output
+  -exit-on-success    Exit on the first successful 'solve' directive
+  -clean-up-inst      Remove trivial parts of instance from output
+  -max-msecs &lt;num&gt;    Maximum running time in milliseconds
+  -max-threads &lt;num&gt;  Maximum number of simultaneous threads
+</pre>
+
+<p>
+Example:
+</p>
+
+<pre>
+$ <b>java de.tum.in.isabelle.Kodkodi.Kodkodi &lt; examples/pigeonhole.kki</b>
+<i>
+*** PROBLEM 1 ***
+
+---OUTCOME---
+UNSATISFIABLE
+
+---STATS---
+p cnf 54 68
+primary variables: 6
+parsing time: 65 ms
+translation time: 92 ms
+solving time: 0 ms</i>
+</pre>
+
+<h2>Input Format</h2>
+
+<p>
+Kodkodi's input format borrows heavily from the output format of the
+<tt>toString()</tt> implementations found in the Kodkod library. The operator
+that are available in Alloy 4 are given the same precedences as they have there.
+</p>
+
+<p>
+The grammar is expressed using a variant of Extended Backus-Naur Form (EBNF).
+The actual grammar used by Kodkodi is written using ANTLR and can be found in
+the file <tt>Kodkodi.g</tt>.
+</p>
+
+<h3>Lexical Issues</h3>
+
+<p>
+The grammar is based on the following lexical units, or tokens:
+</p>
+
+<pre>
+WHITESPACE    <font color="#808080">::=</font> <font color="#808080" size="+1">(</font><u> </u> <font color="#808080" size="+1">|</font> <b>\n</b> <font color="#808080" size="+1">|</font> <b>\r</b> <font color="#808080" size="+1">|</font> <b>\t</b> <font color="#808080" size="+1">|</font> <b>\v</b><font color="#808080" size="+1">)+</font>
+COMMENT       <font color="#808080">::=</font> <b>//</b> <font color="#808080" size="+1">~</font><font color="#808080" size="+1">(</font><b>\n</b><font color="#808080" size="+1">)*</font> (<b>\n</b> <font color="#808080" size="+1">|</font> EOF<font color="#808080" size="+1">)</font>
+NUM           <font color="#808080">::=</font> <font color="#808080" size="+1">[</font><b>+</b> <font color="#808080" size="+1">|</font> <b>-</b><font color="#808080" size="+1">]</font> <font color="#808080" size="+1">(</font><b>0</b> <font color="#808080" size="+1">|</font> <b>1</b> <font color="#808080" size="+1">|</font> &hellip; <font color="#808080" size="+1">|</font> <b>9</b><font color="#808080" size="+1">)+</font>
+STR_LITERAL   <font color="#808080">::=</font> <b>"</b> <font color="#808080" size="+1">~</font><font color="#808080" size="+1">(</font><b>"</b> <font color="#808080" size="+1">|</font> <b>\n</b><font color="#808080" size="+1">)*</font> <b>"</b>
+
+ATOM_NAME     <font color="#808080">::=</font> <b>A</b> NAT<font color="#808080" size="+1">&nbsp;</font>
+UNIV_NAME     <font color="#808080">::=</font> <b>u</b> NAT<font color="#808080" size="+1">&nbsp;</font>
+OFF_UNIV_NAME <font color="#808080">::=</font> <b>u</b> NAT <b>@</b> NAT<font color="#808080" size="+1">&nbsp;</font>
+TUPLE_NAME    <font color="#808080">::=</font> <font color="#808080" size="+1">(</font><b>P</b> <font color="#808080" size="+1">|</font> <b>T</b> NAT <b>_</b><font color="#808080" size="+1">)</font> NAT
+RELATION_NAME <font color="#808080">::=</font> <font color="#808080" size="+1">(</font><b>s</b> <font color="#808080" size="+1">|</font> <b>r</b> <font color="#808080" size="+1">|</font> <b>m</b> NAT <b>_</b><font color="#808080" size="+1">)</font> NAT
+VARIABLE_NAME <font color="#808080">::=</font> <font color="#808080" size="+1">(</font><b>S</b> <font color="#808080" size="+1">|</font> <b>R</b> <font color="#808080" size="+1">|</font> <b>M</b> NAT <b>_</b><font color="#808080" size="+1">)</font> NAT <b>'</b><font color="#808080" size="+1">?</font>
+TUPLE_REG     <font color="#808080">::=</font> <b>$</b> <font color="#808080" size="+1">(</font><b>A</b> <font color="#808080" size="+1">|</font> <b>P</b> <font color="#808080" size="+1">|</font> <b>T</b> NAT <b>_</b><font color="#808080" size="+1">)</font> NAT
+TUPLE_SET_REG <font color="#808080">::=</font> <b>$</b> <font color="#808080" size="+1">(</font><b>a</b> <font color="#808080" size="+1">|</font> <b>p</b> <font color="#808080" size="+1">|</font> <b>t</b> NAT <b>_</b><font color="#808080" size="+1">)</font> NAT
+FORMULA_REG   <font color="#808080">::=</font> <b>$f</b> NAT<font color="#808080" size="+1">&nbsp;</font>
+REL_EXPR_REG  <font color="#808080">::=</font> <b>$e</b> NAT<font color="#808080" size="+1">&nbsp;</font>
+INT_EXPR_REG  <font color="#808080">::=</font> <b>$i</b> NAT<font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+<tt>NAT</tt> abbreviates <tt>0</tt> <font color="#808080" size="+1">|</font> <tt>1</tt><font color="#808080" size="+1">..</font><tt>9</tt> <tt>0</tt><font color="#808080" size="+1">..</font><tt>9</tt><font color="#808080" size="+1">*</font>.
+</p>
+
+<p>
+Comments start with <tt>//</tt> and end with the line. Whitespace is ignored,
+except as a token separator. In addition to the tokens listed above, various
+keywords and operators are recognized as tokens. These are shown in bold in the
+grammar.
+</p>
+
+<p>
+The table below describes the lexical conventions adopted for naming atoms,
+tuples, relations, variables, and registers.
+</p>
+
+<p>
+<table width="100%" cellpadding="3" cellspacing="1" border="0" bgcolor="#d7d7d7">
+<thead><td><b>Token Name</b></td><td><b>Syntax</b></td><td><b>Description</b></td></thead>
+<tr class="odd"><td><tt>ATOM_NAME</tt></td><td><tt>A</tt><i>j</i></td><td>Atom at index <i>j</i> in the universe</td></tr>
+<tr class="even"><td><tt>UNIV_NAME</tt></td><td><tt>u</tt><i>n</i></td><td>Set of atoms <tt>A0</tt> to <tt>A</tt>(<i>n</i> &minus; 1)</td></tr>
+<tr class="odd"><td><tt>OFF_UNIV_NAME</tt></td><td><tt>u</tt><i>n</i><tt>@</tt><i>j</i></td><td>Set of atoms <tt>A</tt><i>j</i> to <tt>A</tt>(<i>j</i> + <i>n</i> &minus; 1)</td></tr>
+<tr class="even"><td rowspan="2"><tt>TUPLE_NAME</tt></td><td><tt>P</tt><i>j</i></td><td>Pair at index <i>j</i> in the pair space associated with the universe</td></tr>
+<tr class="even"><td><tt>T</tt><i>n</i>_<i>j</i></td><td><i>n</i>-tuple at index <i>j</i> in the <i>n</i>-tuple space associated with the universe (<i>n</i> &ge; 3)</td></tr>
+<tr class="odd"><td rowspan="3"><tt>RELATION_NAME</tt></td><td><tt>s</tt><i>j</i></td><td>Set number <i>j</i></td></tr>
+<tr class="odd"><td><tt>r</tt><i>j</i></td><td>Binary relation number <i>j</i></td></tr>
+<tr class="odd"><td><tt>m</tt><i>n</i>_<i>j</i></td><td><i>n</i>-ary multirelation number <i>j</i> (<i>n</i> &ge; 3)</td></tr>
+<tr class="even"><td rowspan="6"><tt>VARIABLE_NAME</tt></td><td><tt>S</tt><i>j</i></td><td>Unprimed set variable number <i>j</i></td></tr>
+<tr class="even"><td><tt>S</tt><i>j</i><tt>'</tt></td><td>Primed set variable number <i>j</i></td></tr>
+<tr class="even"><td><tt>R</tt><i>j</i></td><td>Unprimed binary relation variable number <i>j</i></td></tr>
+<tr class="even"><td><tt>R</tt><i>j</i><tt>'</tt></td><td>Primed binary relation variable number <i>j</i></td></tr>
+<tr class="even"><td><tt>M</tt><i>n</i>_<i>j</i></td><td>Unprimed <i>n</i>-ary multirelation variable number <i>j</i> (<i>n</i> &ge; 3)</td></tr>
+<tr class="even"><td><tt>M</tt><i>n</i>_<i>j</i><tt>'</tt></td><td>Primed <i>n</i>-ary multirelation variable number <i>j</i> (<i>n</i> &ge; 3)</td></tr>
+<tr class="odd"><td rowspan="3"><tt>TUPLE_REG<tt></td><td><tt>$A</tt><i>j</i></td><td>One-tuple register number <i>j</i></td></tr>
+<tr class="odd"><td><tt>$P</tt><i>j</i></td><td>Pair register number <i>j</i></td></tr>
+<tr class="odd"><td><tt>$T</tt><i>n</i><tt>_</tt><i>j</i></td><td><i>n</i>-tuple register number <i>j</i> (<i>n</i> &ge; 3)</td></tr>
+<tr class="even"><td rowspan="3"><tt>TUPLE_SET_REG</tt></td><td><tt>$a</tt><i>j</i></td><td>One-tuple set register number <i>j</i></td></tr>
+<tr class="even"><td><tt>$p</tt><i>j</i></td><td>Pair set register number <i>j</i></td></tr>
+<tr class="even"><td><tt>$t</tt><i>n</i><tt>_</tt><i>j</i></td><td><i>n</i>-tuple set register number <i>j</i> (<i>n</i> &ge; 3)</td></tr>
+<tr class="odd"><td><tt>FORMULA_REG</tt></td><td><tt>$f</tt><i>j</i></td><td>Formula register number <i>j</i></td></tr>
+<tr class="even"><td><tt>REL_EXPR_REG</tt></td><td><tt>$e</tt><i>j</i></td><td>Relational expression register number <i>j</i></td></tr>
+<tr class="odd"><td><tt>INT_EXPR_REG</tt></td><td><tt>$i</tt><i>j</i></td><td>Integer expression register number <i>j</i></td></tr>
+</table>
+</p>
+
+<p>
+Atoms and tuples are defined implicitly in terms of the universe. Relations and
+variables need no declarations, but relations do need bounds. Variables may be
+primed&mdash;a primed variable is distinct from the corresponding unprimed
+variant. Registers must be assigned to before they are used in an expression. It
+is highly recommended to use low indices because Kodkodi stores relations,
+variables, and registers in 0-based arrays.
+</p>
+
+<h3>Overall Structure</h3>
+
+<p>
+This section presents the overall structure of Kodkod input files.
+</p>
+
+<h4>Problems</h4>
+
+<pre>
+problems <font color="#808080">::=</font> problem<font color="#808080" size="+1">*</font>
+</pre>
+
+<p>
+Kodkodi takes a list of &ldquo;problems&rdquo; as input.
+
+<h4>Problem</h4>
+
+<pre>
+problem <font color="#808080">::=</font> option<font color="#808080" size="+1">*</font>
+            univ_spec<font color="#808080" size="+1">&nbsp;</font>
+            tuple_reg_directive<font color="#808080" size="+1">*</font>
+            bound_spec<font color="#808080" size="+1">*</font>
+            int_bound_spec<font color="#808080" size="+1">?</font>
+            expr_reg_directive<font color="#808080" size="+1">*</font>
+            solve_directive<font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+A problem consists of three main parts: a universe specification, a set of bound
+specifications, and a Kodkod formula to satisfy supplied in a
+&ldquo;solve&rdquo; directive.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+univ: u1
+bounds s0: {A0}
+solve all [S0 : one s0, S1 : one s0] | S0 = S1;
+</pre>
+
+<h4>Kodkod Options</h4>
+
+<pre>
+option <font color="#808080">::=</font> <b>solver</b> <b>:</b> STR_LITERAL <font color="#808080" size="+1">(</font><b>,</b> STR_LITERAL<font color="#808080" size="+1">)*</font> <font color="#808080" size="+1">|</font>
+           <b>symmetry_breaking</b> <b>:</b> NUM <font color="#808080" size="+1">|</font>
+           <b>sharing</b> <b>:</b> NUM <font color="#808080" size="+1">|</font>
+           <b>bit_width</b> <b>:</b> NUM <font color="#808080" size="+1">|</font>
+           <b>skolem_depth</b> <b>:</b> NUM <font color="#808080" size="+1">|</font>
+           <b>flatten</b> <b>:</b> <font color="#808080" size="+1">(</font><b>true</b> <font color="#808080" size="+1">|</font> <b>false</b><font color="#808080" size="+1">)</font>
+</pre>
+
+<p>
+Kodkod supports various options, documented in the
+<tt>kodkod.engine.config.Options</tt> class. The following solvers are
+supported:
+</p>
+
+<pre>
+solver: "DefaultSAT4J"
+solver: "LightSAT4J"
+solver: "ZChaff"
+solver: "zChaff"
+solver: "ZChaffMincost"
+solver: "zChaffMincost"
+solver: "MiniSatProver"
+solver: "MiniSat"
+solver: "SAT4J" "<i>instance</i>"
+solver: "External" "<i>executable</i>" "<i>temp_input</i>" "<i>temp_output</i>" "<i>arg_1</i>" &hellip; "<i>arg_</i>n"
+solver: "ExternalV2" "<i>executable</i>" "<i>temp_input</i>" "<i>temp_output</i>"
+                     "<i>sat_marker</i>" "<i>var_marker</i>" "<i>unsat_marker</i>" "<i>arg_1</i>" &hellip; "<i>arg_</i>n"
+</pre>
+
+<p>
+For <tt>"External"</tt>, the optional arguments <tt>"<i>arg_1</i>" &hellip;
+"<i>arg_</i>n</tt> are passed before the input file name. For
+<tt>"ExternalV2"</tt>, they are passed after.
+
+<h4>Universe Specification</h4>
+
+<pre>
+univ_spec <font color="#808080">::=</font> <b>univ</b> <b>:</b> UNIV_NAME
+</pre>
+
+<p>
+The universe specification fixes the universe's uninterpreted atoms. Kodkodi
+requires that the atoms are numbered consecutively from <tt>A0</tt> to
+<tt>A</tt>(<i>n</i> &minus; 1).
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+univ: u2
+univ: u100
+</pre>
+
+<h4>Relation Bound Specifications</h4>
+
+<pre>
+bound_spec <font color="#808080">::=</font> <b>bounds</b> RELATION_NAME <font color="#808080" size="+1">(</font><b>,</b> RELATION_NAME<font color="#808080" size="+1">)</font> <b>:</b>
+               <font color="#808080" size="+1">(</font> tuple_set <font color="#808080" size="+1">|</font> <b>[</b> tuple_set <b>,</b> tuple_set <b>]</b> <font color="#808080" size="+1">)</font>
+</pre>
+
+<p>
+A relational bound specification gives a lower and an upper bound for the given
+relations. If only one bound is specified, it is taken as both lower and upper
+bound. The lower bound must be a subset of the upper bound.
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+bounds s0: {A0}
+bounds r2: [{}, {A0 .. A9} -&gt; {A10 .. A19}]
+</pre>
+
+<h4>Integer Bound Specification</h4>
+
+<pre>
+int_bound_spec <font color="#808080">::=</font> <b>int_bounds</b> <b>:</b> int_bound_seq <font color="#808080" size="+1">(</font><b>,</b> int_bound_seq<font color="#808080" size="+1">)*</font>
+int_bound_seq  <font color="#808080">::=</font> <font color="#808080" size="+1">[</font>NUM <b>:</b><font color="#808080" size="+1">]</font> <b>[</b> tuple_set <font color="#808080" size="+1">(</font><b>,</b> tuple_set<font color="#808080" size="+1">)*</font> <b>]</b>
+</pre>
+
+<p>
+An integer bound specification establishes a correspondence between integers and
+sets of atoms that represent that integer in relational expressions. The syntax
+makes it possible to specify the bounds of consecutive integers in sequence.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+int_bounds: [{A0}, {A1}], 10: [{A2}, {A3}, {A4}]
+</pre>
+
+<p>
+In the above example, <tt>0</tt> is bounded by <tt>{A0}</tt>, <tt>1</tt> is
+bounded by <tt>{A1}</tt>, <tt>10</tt> is bounded by <tt>{A2}</tt>, <tt>11</tt>
+is bounded by <tt>{A11}</tt>, and <tt>12</tt> is bounded by <tt>{A4}</tt>.
+</p>
+
+<h4>Solve Directive</h4>
+
+<pre>
+solve_directive <font color="#808080">::=</font> <b>solve</b> formula <b>;</b>
+</pre>
+
+<p>
+The &ldquo;solve&rdquo; directive tells Kodkod to try to satisfy the given
+formula.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+solve all [S0 : one s0, S1 : one s0] | !(S0 = S1) => no (S0.r0 &amp; S1.r0)
+</pre>
+
+<h3>Register Directives</h3>
+
+<p>
+Registers make it possible to use a complex syntactic construct several times
+without duplicating it. They also help reduce Kodkod's memory usage and running
+time.
+</p>
+
+<h4>Tuple Register Directives</h4>
+
+<pre>
+tuple_reg_directive <font color="#808080">::=</font> TUPLE_REG <b>:=</b> tuple <font color="#808080" size="+1">|</font>
+                        TUPLE_SET_REG <b>:=</b> tuple_set<font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+A tuple register directive assigns a value to a tuple or tuple set register.
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+$P0 := [A0, A0]
+$P1 := [A1, A1]
+$t4_0 := {$P0, $P1} -&gt; {$P0, $P1}
+</pre>
+
+<h4>Expression Register Directives</h4>
+
+<pre>
+expr_reg_directive <font color="#808080">::=</font> FORMULA_REG <b>:=</b> formula <font color="#808080" size="+1">|</font>
+                       REL_EXPR_REG <b>:=</b> rel_expr <font color="#808080" size="+1">|</font>
+                       INT_EXPR_REG <b>:=</b> int_expr<font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+Formulas, relational expressions, and integer expressions can also be assigned
+to registers using an expression register directive. An alternative is to use
+the <tt>let</tt> binder inside an expression.
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+$f0 := all [S0 : one s0] | s0 in univ
+$e5 := (s0 &amp; s1).r1 + (s0 &amp; s2).r2
+$i14 := 2 * #($e5) + 1
+</pre>
+
+<h3>Tuple Language</h3>
+
+<p>
+Kodkod supports partial solutions in the form of bounds on relations. The
+bound specifications involve tuples and tuple sets.
+</p>
+
+<h4>Tuples</h4>
+
+<pre>
+tuple <font color="#808080">::=</font> <b>[</b> ATOM_NAME <font color="#808080" size="+1">(</font><b>,</b> ATOM_NAME<font color="#808080" size="+1">)*</font> <b>]</b> <font color="#808080" size="+1">|</font>
+          ATOM_NAME <font color="#808080" size="+1">|</font>
+          TUPLE_NAME <font color="#808080" size="+1">|</font>
+          TUPLE_REG<font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+An <i>n</i>-tuple is normally specified using the syntax
+<tt>[A<i>j</i></tt><sub>1</sub><tt>, &hellip;,
+A<i>j</i></tt><sub><i>n</i></sub><tt>]</tt>. The brackets are optional when
+<i>n</i> = 1. Alternatively, tuples can be specified using an index in the
+<i>n</i>-tuple space. For example, given the universe <tt>{A0 .. A9}</tt>, the
+name <tt>P27</tt> refers to the pair <tt>[A2, A7]</tt>.
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+[A0, A1, A5, A20]
+A0
+P5
+$P14
+</pre>
+
+<h4>Tuple Sets</h4>
+
+<pre>
+tuple_set <font color="#808080">::=</font> tuple_set <font color="#808080" size="+1">(</font><b>+</b> <font color="#808080" size="+1">|</font> <b>-</b><font color="#808080" size="+1">)</font> tuple_set <font color="#808080" size="+1">|</font>
+              tuple_set <b>&amp;</b> tuple_set <font color="#808080" size="+1">|</font>
+              tuple_set <b>-&gt;</b> tuple_set <font color="#808080" size="+1">|</font>
+              tuple_set <b>[</b> NUM <b>]</b> <font color="#808080" size="+1">|</font>
+              <b>{</b> tuple <font color="#808080" size="+1">(</font><b>,</b> tuple<font color="#808080" size="+1">)*</font> <b>}</b> <font color="#808080" size="+1">|</font>
+              <b>{</b> tuple <b>..</b> tuple <b>}</b> <font color="#808080" size="+1">|</font>
+              <b>{</b> tuple <b>#</b> tuple <b>}</b> <font color="#808080" size="+1">|</font>
+              <b>none</b> <font color="#808080" size="+1">|</font>
+              <b>all</b> <font color="#808080" size="+1">|</font>
+              UNIV_NAME <font color="#808080" size="+1">|</font>
+              OFF_UNIV_NAME <font color="#808080" size="+1">|</font>
+              TUPLE_SET_REG <font color="#808080" size="+1">|</font>
+              <b>(</b> tuple_set <b>)</b><font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+Tuple sets can be constructed in several ways. The <tt>+</tt>, <tt>-</tt>, and
+<tt>&amp;</tt> operators denote the union, difference, and intersection of two
+tuple sets, respectively. The <tt>-&gt;</tt> operator denotes the Cartesian
+product of two tuple sets. The <tt>[]</tt> operator projects the tuple set onto
+the given dimension. Tuple sets can be specified exhaustively by listing all
+their tuples. If all the tuples have consecutive indices, the range operator
+<tt>..</tt> can be used. Alternatively, if all the tuples occupy a rectangular,
+cubic, etc., area in the tuple space, they can be specified by passing the
+lowest and highest corner of the area to the <tt>#</tt> operator. Finally,
+<tt>none</tt> is a synonym for <tt>{}</tt>, and <tt>all</tt> denotes the
+complete tuple set (whose arity is deduced from the context).
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+{A1}
+{A1, A2} -&gt; {A3, A4}
+{[A1, A2] .. [A3, A4]}
+{[A1, A2] # [A3, A4]}
+$p14
+</pre>
+
+<h4>Tuple Set Operator Precedences and Associativities</h4>
+
+<p>
+The operator precedences and associativities are given in the table below.
+Fully bracketed operators are not listed.
+</p>
+
+<p>
+<table width="100%" cellpadding="3" cellspacing="1" border="0" bgcolor="#d7d7d7">
+<thead><td width="10%"><b>Level</b></td><td width="50%"><b>Operator Class</b></td><td width="20%"><b>Arity</b></td><td width="20%"><b>Associativity</b></td></thead>
+<tr class="odd"><td>1</td><td><tt>+ &nbsp; -</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="even"><td>2</td><td><tt>&amp;</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="odd"><td>3</td><td><tt>-></tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="even"><td>4</td><td><tt>[]</tt></td><td>Binary</td><td>Left-associative</td></tr>
+</table>
+
+<h3>Expression Language</h3>
+
+<p>
+Kodkod supports three types of expression: Boolean expressions (formulas),
+relational expressions, and integer expressions.
+</p>
+
+<h4>Formulas</h4>
+
+<pre>
+formula <font color="#808080">::=</font> <font color="#808080" size="+1">(</font><b>all</b> <font color="#808080" size="+1">|</font> <b>some</b><font color="#808080" size="+1">)</font> decls <b>|</b> formula <font color="#808080" size="+1">|</font>
+            <b>let</b> assigns <b>|</b> formula <font color="#808080" size="+1">|</font>
+            <b>if</b> formula <b>then</b> formula <b>else</b> formula <font color="#808080" size="+1">|</font>
+            formula <b>||</b> formula <font color="#808080" size="+1">|</font>
+            formula <b>&lt;=&gt;</b> formula <font color="#808080" size="+1">|</font>
+            formula <b>=&gt;</b> formula <font color="#808080" size="+1">|</font>
+            formula <b>&amp;&amp;</b> formula <font color="#808080" size="+1">|</font>
+            <b>!</b> formula <font color="#808080" size="+1">|</font>
+            <b>ACYCLIC</b> <b>(</b> RELATION_NAME <b>)</b> <font color="#808080" size="+1">|</font>
+            <b>FUNCTION</b> <b>(</b> RELATION_NAME <b>,</b> rel_expr <b>-&gt;</b> <font color="#808080" size="+1">(</font><b>ONE</b> <font color="#808080" size="+1">|</font> <b>LONE</b><font color="#808080" size="+1">)</font> rel_expr <b>)</b> <font color="#808080" size="+1">|</font>
+            <b>TOTAL_ORDERING</b> <b>(</b> RELATION_NAME <b>,</b> <font color="#808080" size="+1">(</font>UNIV_NAME <font color="#808080" size="+1">|</font> OFF_UNIV_NAME <font color="#808080" size="+1">|</font> RELATION_NAME<font color="#808080" size="+1">)</font> <b>,</b>
+                             <font color="#808080" size="+1">(</font>ATOM_NAME <font color="#808080" size="+1">|</font> RELATION_NAME<font color="#808080" size="+1">)</font> <b>,</b> <font color="#808080" size="+1">(</font>ATOM_NAME <font color="#808080" size="+1">|</font> RELATION_NAME<font color="#808080" size="+1">)</font> <b>)</b> <font color="#808080" size="+1">|</font>
+            rel_expr <font color="#808080" size="+1">(</font><b>in</b> <font color="#808080" size="+1">|</font> <b>=</b><font color="#808080" size="+1">)</font> rel_expr <font color="#808080" size="+1">|</font>
+            int_expr <font color="#808080" size="+1">(</font><b>=</b> <font color="#808080" size="+1">|</font> <b>&lt;</b> <font color="#808080" size="+1">|</font> <b>&lt;=</b> <font color="#808080" size="+1">|</font> <b>&gt;</b> <font color="#808080" size="+1">|</font> <b>&gt;=</b><font color="#808080" size="+1">)</font> int_expr <font color="#808080" size="+1">|</font>
+            <font color="#808080" size="+1">(</font><b>no</b> <font color="#808080" size="+1">|</font> <b>lone</b> <font color="#808080" size="+1">|</font> <b>one</b> <font color="#808080" size="+1">|</font> <b>some</b><font color="#808080" size="+1">)</font> rel_expr <font color="#808080" size="+1">|</font>
+            <b>false</b> <font color="#808080" size="+1">|</font>
+            <b>true</b> <font color="#808080" size="+1">|</font>
+            FORMULA_REG <font color="#808080" size="+1">|</font>
+            <b>(</b> formula <b>)</b><font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+A formula, or Boolean expression, specifies a constraint involving relations and
+integers.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+some [S0 : some s0] | if S0 in s1 then !$f1 else $i0 &lt;= $i1
+</pre>
+
+<h4>Relational Expressions</h4>
+
+<pre>
+rel_expr <font color="#808080">::=</font> <b>let</b> assigns <b>|</b> rel_expr <font color="#808080" size="+1">|</font>
+             <b>if</b> formula <b>then</b> rel_expr <b>else</b> rel_expr <font color="#808080" size="+1">|</font>
+             rel_expr <font color="#808080" size="+1">(</font><b>+</b> <font color="#808080" size="+1">|</font> <b>-</b><font color="#808080" size="+1">)</font> rel_expr <font color="#808080" size="+1">|</font>
+             rel_expr <b>++</b> rel_expr <font color="#808080" size="+1">|</font>
+             rel_expr <b>&amp;</b> rel_expr <font color="#808080" size="+1">|</font>
+             rel_expr <b>-&gt;</b> rel_expr <font color="#808080" size="+1">|</font>
+             rel_expr <b>\</b> rel_expr <font color="#808080" size="+1">|</font>
+             rel_expr <b>(</b> rel_expr <font color="#808080" size="+1">(</font><b>,</b> rel_expr<font color="#808080" size="+1">)*</font> <b>)</b> <font color="#808080" size="+1">|</font>
+             rel_expr <b>[</b> int_expr <font color="#808080" size="+1">(</font><b>,</b> int_expr<font color="#808080" size="+1">)*</font> <b>]</b> <font color="#808080" size="+1">|</font>
+             rel_expr <b>.</b> rel_expr <font color="#808080" size="+1">|</font>
+             <font color="#808080" size="+1">(</font><b>^</b> <font color="#808080" size="+1">|</font> <b>*</b> <font color="#808080" size="+1">|</font> <b>~</b><font color="#808080" size="+1">)</font> rel_expr <font color="#808080" size="+1">|</font>
+             <b>{</b> decls <b>|</b> formula <b>}</b> <font color="#808080" size="+1">|</font>
+             <font color="#808080" size="+1">(</font><b>Bits</b> <font color="#808080" size="+1">|</font> <b>Int</b><font color="#808080" size="+1">)</font> <b>[</b> int_expr <b>]</b> <font color="#808080" size="+1">|</font>
+             <b>iden</b> <font color="#808080" size="+1">|</font>
+             <b>ints</b> <font color="#808080" size="+1">|</font>
+             <b>none</b> <font color="#808080" size="+1">|</font>
+             <b>univ</b> <font color="#808080" size="+1">|</font>
+             ATOM_NAME <font color="#808080" size="+1">|</font>
+             UNIV_NAME <font color="#808080" size="+1">|</font>
+             OFF_UNIV_NAME <font color="#808080" size="+1">|</font>
+             RELATION_NAME <font color="#808080" size="+1">|</font>
+             VARIABLE_NAME <font color="#808080" size="+1">|</font>
+             REL_EXPR_REG <font color="#808080" size="+1">|</font>
+             <b>(</b> rel_expr <b>)</b><font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+A relational expression denotes a relation (set, binary relation, or
+multirelation). Nearly all operators are identical to those offered by Kodkod,
+which in turn are modeled after those provided by Alloy. Notable exceptions are
+the conditional expression <tt>if &hellip; then &hellip; else &hellip;</tt>;
+the <tt><i>r</i>\<i>s</i></tt> operator, which is a shorthand for
+<tt>if no <i>r</i> then <i>s</i> else <i>r</i></tt>; and finally
+<tt><i>r</i>(<i>s</i></tt><sub>1</sub><tt>, &hellip;, <i>s</i></tt><sub><i>n</i></sub><tt>)</tt>, which is equivalent to
+<tt><i>s</i></tt><sub><i>n</i></sub><tt>.(&hellip;(<i>s</i></tt><sub>1</sub><tt>.<i>r</i>)&hellip;)</tt>.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+if #(s0) > 5 then s0.r0 + s1.r1 else none
+</pre>
+
+<h4>Integer Expressions</h4>
+
+<pre>
+int_expr <font color="#808080">::=</font> <b>sum</b> decls <b>|</b> int_expr <font color="#808080" size="+1">|</font>
+             <b>let</b> assigns <b>|</b> int_expr <font color="#808080" size="+1">|</font>
+             <b>if</b> formula <b>then</b> int_expr <b>else</b> int_expr <font color="#808080" size="+1">|</font>
+             int_expr <font color="#808080" size="+1">(</font><b>&lt;&lt;</b> <font color="#808080" size="+1">|</font> <b>&gt;&gt;</b> <font color="#808080" size="+1">|</font> <b>&gt;&gt;&gt;</b><font color="#808080" size="+1">)</font> int_expr <font color="#808080" size="+1">|</font>
+             int_expr <font color="#808080" size="+1">(</font><b>+</b> <font color="#808080" size="+1">|</font> <b>-</b><font color="#808080" size="+1">)</font> int_expr <font color="#808080" size="+1">|</font>
+             int_expr <font color="#808080" size="+1">(</font><b>*</b> <font color="#808080" size="+1">|</font> <b>/</b> <font color="#808080" size="+1">|</font> <b>%</b><font color="#808080" size="+1">)</font> int_expr <font color="#808080" size="+1">|</font>
+             <font color="#808080" size="+1">(</font><b>#</b> <font color="#808080" size="+1">|</font> <b>sum</b><font color="#808080" size="+1">)</font> <b>(</b> rel_expr <b>)</b> <font color="#808080" size="+1">|</font>
+             int_expr <b>|</b> int_expr <font color="#808080" size="+1">|</font>
+             int_expr <b>^</b> int_expr <font color="#808080" size="+1">|</font>
+             int_expr <b>&amp;</b> int_expr <font color="#808080" size="+1">|</font>
+             <font color="#808080" size="+1">(</font><b>~</b> <font color="#808080" size="+1">|</font> <b>-</b> <font color="#808080" size="+1">|</font> <b>abs</b> <font color="#808080" size="+1">|</font> <b>sgn</b><font color="#808080" size="+1">)</font> int_expr <font color="#808080" size="+1">|</font>
+             NUM <font color="#808080" size="+1">|</font>
+             INT_EXPR_REG <font color="#808080" size="+1">|</font>
+             <b>(</b> int_expr <b>)</b><font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+An integer expression denotes an integer.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+(sum [S0 : one s0] | #(S0) * (#(S0) + 1) / 2) % 10
+</pre>
+
+<h4>Declarations</h4>
+
+<pre>
+decls <font color="#808080">::=</font> <b>[</b> decl <font color="#808080" size="+1">(</font><b>,</b> decl<font color="#808080" size="+1">)*</font> <b>]</b>
+decl  <font color="#808080">::=</font> VARIABLE_NAME <b>:</b> <font color="#808080" size="+1">(</font><b>no</b> <font color="#808080" size="+1">|</font> <b>lone</b> <font color="#808080" size="+1">|</font> <b>one</b> <font color="#808080" size="+1">|</font> <b>some</b> <font color="#808080" size="+1">|</font> <b>set</b><font color="#808080" size="+1">)</font> rel_expr
+</pre>
+
+<p>
+The <tt>all</tt>, <tt>some</tt>, and <tt>sum</tt> quantifiers take a list of
+variable declarations.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+[S0 : set s0, S1 : one s1]
+</pre>
+
+<h4>Assignments</h4>
+
+<pre>
+assigns <font color="#808080">::=</font> <b>[</b> assign <font color="#808080" size="+1">(</font><b>,</b> assign<font color="#808080" size="+1">)*</font> <b>]</b>
+assign  <font color="#808080">::=</font> FORMULA_REG <b>:=</b> formula <font color="#808080" size="+1">|</font>
+            REL_EXP_REG <b>:=</b> rel_exp <font color="#808080" size="+1">|</font>
+            INT_EXP_REG <b>:=</b> int_exp <font color="#808080" size="+1">&nbsp;</font>
+</pre>
+
+<p>
+The <tt>let</tt> binder takes a list of register assignments.
+</p>
+
+<p>
+Example:
+</p>
+
+<pre>
+[$f0 := all [S0 : one s0] | s0 in univ, $i14 := 2 * #($e5) + 1]
+</pre>
+
+<h4>Boolean, Relational, and Integer Operator Precedences and
+	Associativities</h4>
+
+<p>
+The operator precedences and associativities are given in the table below.
+Fully bracketed operators are not listed.
+</p>
+
+<p>
+<table width="100%" cellpadding="3" cellspacing="1" border="0" bgcolor="#d7d7d7">
+<thead><td width="10%"><b>Level</b></td><td width="50%"><b>Operator Class</b></td><td width="20%"><b>Arity</b></td><td width="20%"><b>Associativity</b></td></thead>
+<tr class="odd"><td>1</td><td><tt>all&nbsp;| &nbsp; some&nbsp;| &nbsp; sum&nbsp;| &nbsp; let&nbsp;| &nbsp; if&nbsp;then&nbsp;else</tt></td><td>Binary/Ternary</td><td>Right-associative</td></tr>
+<tr class="even"><td>2</td><td><tt>||</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="odd"><td>3</td><td><tt>&lt;=&gt;</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="even"><td>4</td><td><tt>=&gt;</tt></td><td>Binary</td><td>Right-associative</td></tr>
+<tr class="odd"><td>5</td><td><tt>&amp;&amp;</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="even"><td>6</td><td><tt>!</tt></td><td>Unary</td><td>N/A</td></tr>
+<tr class="odd"><td>7</td><td><tt>in &nbsp; = &nbsp; &lt; &nbsp; &lt;= &nbsp; &gt; &nbsp; &gt;=</tt></td><td>Binary</td><td>N/A</td></tr>
+<tr class="even"><td>8</td><td><tt>no &nbsp; lone &nbsp; one &nbsp; some</tt></td><td>Unary</td><td>N/A</td></tr>
+<tr class="odd"><td>9</td><td><tt>&lt;&lt; &nbsp; &gt;&gt; &nbsp; &gt;&gt;&gt;</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="even"><td>10</td><td><tt>+ &nbsp; - &nbsp;</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="odd"><td>11</td><td><tt>* &nbsp; / &nbsp; %</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="even"><td>12</td><td><tt>++</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="odd"><td>13</td><td><tt>| &nbsp; ^ &nbsp; &amp;</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="even"><td>14</td><td><tt>-&gt;</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="odd"><td>15</td><td><tt>\</tt></td><td>Binary</td><td>Associative</td></tr>
+<tr class="even"><td>16</td><td><tt>(,)</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="odd"><td>17</td><td><tt>[,]</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="even"><td>18</td><td><tt>.</tt></td><td>Binary</td><td>Left-associative</td></tr>
+<tr class="odd"><td>19</td><td><tt>^ &nbsp; * &nbsp; ~ &nbsp; - &nbsp; abs &nbsp; sgn</tt></td><td>Unary</td><td>N/A</td></tr>
+</table>
+
+<h3>Comments</h3>
+
+<p>
+Comments may be specified as in C++, that is, either as a one line comment
+starting with <tt>//</tt> or as a block starting with <tt>/*</tt> and ending
+with <tt>*/</tt>.
+</p>
+
+<p>
+Examples:
+</p>
+
+<pre>
+/*
+  Copyright 2009 Gnomovision, Inc.
+*/
+
+univ: u99999  // Don't panic!
+</pre>
+
+</body>
+</html>

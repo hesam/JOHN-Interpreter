@@ -1,0 +1,11 @@
+solver: "MiniSat"
+symmetry_breaking: 3
+flatten: false
+univ: u6
+$p0 := u3 -> u2@3
+bounds s0: u3
+bounds s1: u2@3
+bounds r0: [{}, $p0]
+$f0 := FUNCTION(r0, s0->one s1)
+$f1 := all [S0 : one s0, S1 : one s0] | !(S0 = S1) => no (S0.r0 & S1.r0)
+solve $f0 && $f1;

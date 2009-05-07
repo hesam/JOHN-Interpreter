@@ -1,0 +1,5 @@
+// Third example in Table 2.1 from Tjark Weber's Ph.D. thesis, p. 41 (2008)
+solver: "MiniSat"
+univ: u2
+bounds r0, r1: [u0 -> u0, u2 -> u2]
+solve !(^(r0 & r1) = ^r0 & ^r1);

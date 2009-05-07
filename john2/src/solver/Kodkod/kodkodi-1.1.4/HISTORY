@@ -1,0 +1,47 @@
+Version 1.1.4 (17 Mar 2009)
+
+  * Fixed exception handling w.r.t. threads
+
+Version 1.1.3 (12 Mar 2009)
+
+  * Added "-max-threads" option
+  * Removed temporary "ExternalV2" files after use
+
+Version 1.1.2 (27 Feb 2009)
+
+  * Added "ExternalV2" syntax to support non-standard output formats
+
+Version 1.1.1 (18 Feb 2009)
+
+  * Used Kodkod's n-ary operator mechanism for "||", "&&", and "[]" (projection)
+  * Changed syntax for exact bounds to make them stand out more
+  * Added "-version" command-line option
+  * Bundled Kodkod and SAT4J
+
+Version 1.1.0 (7 Jan 2009)
+
+  * Ported to 27 Nov 2008 version of Kodkod
+  * Added support for command-line options
+  * Added support for multiple problems in one run
+  * Removed "prealloc" declaration
+  * Added arity mismatch exception handling
+  * Added atom and universe syntax in formulas
+  * Added primed variables
+  * Added "\" operator
+  * Added support for empty declaration lists for logical quantifiers
+  * Renamed bitwidth option bit_width
+  * Added "+", "-", "&", and "()" operators to the tuple set syntax
+
+Version 1.0.2 (30 Oct 2008)
+
+  * Added "let" construct
+  * Fixed bailing-out mechanism to always bail out in case of error
+  * Trimmed output to exclude relations and integers with exact bounds
+
+Version 1.0.1 (17 Oct 2008)
+
+  * Fixed several bugs
+
+Version 1.0.0 (15 Oct 2008)
+
+  * First release

@@ -1,0 +1,67 @@
+univ: u1
+$f1 := true && false && true
+$f2 := true || false || true
+$f4 := true => false => true => false
+$f5 := true <=> false
+$f6 := r1 in r2 && r3 in r4
+$f7 := r1 = r2 && r3 = r4
+$f8 := 1 < 2
+$f9 := 1 <= 2
+$f10 := 1 = 2
+$f11 := 1 >= 2
+$f12 := 1 > 2
+$f13 := no r1
+$f14 := lone r1
+$f15 := one r1
+$f16 := some r1
+$f17 := !true || !false
+$f19 := all [R1 : set r1] | R1 in iden
+$f21 := all [R1 : set r1, R2 : set r2] | R1 in iden
+$f22 := some [R1 : set r1] | R1 in iden
+$f23 := ACYCLIC(r1)
+$f24 := FUNCTION(r1, s1 -> lone s2)
+$f25 := FUNCTION(r1, s1 -> one s2)
+$f26 := TOTAL_ORDERING(r1, s2, s3, s4)
+$e1 := r1 + r2 + r3 + r4
+$e2 := r1 + r2 - r3 + r4 - r5
+$e3 := r1 & r2 & r3 & r4
+$e4 := r1 ++ r2 ++ r3 ++ r4
+$e5 := r1.r2.r3.r4.s1
+$e6 := r1->r2->r3->r4
+$e9 := { [S1 : one s1] | s1 in s2 }
+$e10 := { [S1 : one s1, S2 : one s2] | s1 in s2 }
+$e11 := Bits [1]
+$e12 := Int [2]
+$e13 := m9_1 [1]
+$e14 := m9_1 [2, 3]
+$e15 := m9_1 [1, 2, 3, 4, 5, 6, 7, 8]
+$e16 := ~r1
+$e17 := ^r2
+$e18 := *r3
+$e19 := ~^*~^*r4
+$i1 := 1 + 2 + 3 + 4
+$i2 := 1 + 2 - 3 + 4 - 5
+$i3 := 1 - 2 - 3 - 4
+$i4 := 1 * 2 * 3 * 4
+$i5 := 1 / 2 / 3 / 4
+$i6 := 1 % 2 % 3 % 4
+$i7 := 1 * 2 / 3 % 4
+$i8 := 1 & 2 & 3 & 4
+$i9 := 1 | 2 | 3 | 4
+$i10 := 1 ^ 2 ^ 3 ^ 4
+$i11 := 1 << 2 << 3 << 4
+$i12 := 1 >> 2 >> 3 >> 4
+$i13 := 1 >>> 2 >>> 3 >>> 4
+$i14 := 1 << 2 >> 3 >>> 4
+$i16 := #(s1)
+$i18 := sum(S2)
+$i19 := if true || false then 1 + 2 << 3 else 4 + 5 << 6
+$i20 := if true then if false then 1 + 2 else 3 + 4 else 5 + 6
+$i21 := 1 + 2 + 3 + 4 + 5 + 6 + 32767 + 32768 + 65535 + 65536 + -2147483647 + -2147483648
+$i22 := -(1)
+$i23 := ~1
+$i24 := abs -5
+$i25 := abs(-5)
+$i26 := sgn -5
+$i27 := sgn(-5)
+solve true;

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+echo "Building Kodkodi..." && \
+mkdir -p de/tum/in/isabelle/Kodkodi && \
+cd src && \
+javac ExternalSolverV2.java && \
+mv ExternalSolverV2*.class ../de/tum/in/isabelle/Kodkodi && \
+javac -cp ..:$CLASSPATH Kodkodi*.java && \
+mv Kodkodi*.class ../de/tum/in/isabelle/Kodkodi && \
+cd .. && \
+mkdir -p jar && \
+jar cf jar/kodkodi-1.1.4.jar de/ && \
+rm -fr de/

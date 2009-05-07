@@ -1,0 +1,24 @@
+solver: "MiniSat"
+univ: u10
+bounds s0, s1, s2, s3, s4: [none, all]
+bounds r1: [none, all]
+$f0 := all [S0 : one s0] |
+       some [S1 : one s0] |
+       all [S2 : one s0] |
+       all [S3 : one s0] |
+       if all [S0 : one s0] | if true then false else true
+       then all [S0 : one s0] |
+            if true then
+                false || true <=> true =>
+                true &&
+                ACYCLIC(r1) &&
+                FUNCTION(r1, s1 -> lone s2) &&
+                FUNCTION(r1, s1 -> one s2) &&
+                TOTAL_ORDERING(r1, s2, s3, s4) &&
+                1 << 2 + 3 * #(s1) * -~abs sgn -1 = 2 &&
+                none = univ &&
+                some (S1->S2.^*~^*~iden[0] + S2->S3.iden[0])
+            else
+                false
+       else all [S0 : one s0] | if true then false else false
+solve $f0;

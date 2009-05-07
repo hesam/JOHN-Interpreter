@@ -1,0 +1,15 @@
+univ: u10
+$f1 := true
+$f2 := true || false
+$f3 := true || false || 0 = 0
+$f4 := true || false || 0 = 0 || 1 = 1
+$f5 := true
+$f6 := true && false
+$f7 := true && false && 0 = 0
+$f8 := true && false && 0 = 0 && 1 = 1
+$e1 := A0
+$e2 := A0->A1
+$e3 := A0->A1->A2
+$e4 := A0->A1->A2->A3
+solve $f1 && $f2 && $f3 && $f4 && ($f5 || $f6 || $f7 || $f8) &&
+      no $e1 && no $e2 && no $e3 && no $e4;

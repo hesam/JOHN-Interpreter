@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+export CLASSPATH=..:../..:../../x86-mac:../jar
+echo "Building Kodkodi..." && \
+mkdir -p de/tum/in/isabelle/Kodkodi && \
+cd src && \
+javac -cp $CLASSPATH ExternalSolverV2.java && \
+mv ExternalSolverV2*.class ../de/tum/in/isabelle/Kodkodi && \
+javac -cp $CLASSPATH Kodkodi*.java && \
+mv Kodkodi*.class ../de/tum/in/isabelle/Kodkodi && \
+cd .. && \
+mkdir -p jar && \
+jar cf jar/kodkodi-1.1.4.jar de/ && \
+echo
+#rm -fr de/

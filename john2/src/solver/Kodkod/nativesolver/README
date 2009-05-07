@@ -1,0 +1,19 @@
+
+The following instructions for installing  JNI libraries used by kodkod work only on UNIX-like systems 
+(Mac OS X, Linux, Cygwin).
+
+Requirements:  java 1.5x
+
+cd [the parent directory of the nativesolver directory]
+mkdir bin
+javac -d bin/ nativesolver/Make.java
+java -cp bin/ nativesolver.Make -d nativesolver
+
+If the installation was successful, the following message will be printed to the console: 
+
+make -C [...]/nativesolver all
+Created the libraries.
+
+This creates the zchaff and minisat JNIs and puts them into a directory from which they can be loaded at runtime. 
+
+
