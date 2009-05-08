@@ -1,7 +1,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;											     ;;;
-;;;  JOHN Language Interpreter (v2)                    					     ;;;
+;;;  JOHN Language Interpreter (ver 2)            					     ;;;
 ;;;                                                               			     ;;;
 ;;;  JOHN2 compiles problems into 1st order relational logic and uses                        ;;;
 ;;;  KodKod solver (http://alloy.mit.edu/kodkod/) to solve them and then                     ;;;
@@ -100,7 +100,7 @@
 [solverInfo at: 'objects put: [OrderedCollection new]]
 [solverInfo at: 'vars put: [IdentityDictionary new]]
 [solverInfo at: 'varTypes put: [IdentityDictionary new]]
-[solverInfo at: 'bounds put: (let ((d [IdentityDictionary new])) [d at: 'Integer put: '0] d)]
+[solverInfo at: 'bounds put: [IdentityDictionary new]]
 [solverInfo at: 'oopta put: [IdentityDictionary new]] ;; encoding from oop program to atom univ
 [solverInfo at: 'atoop put: [IdentityDictionary new]] ;; decoding from atom univ to oop program
 [solverInfo at: 'setNum put: '0]
@@ -148,16 +148,13 @@
 (define-type WorkingMemory Object (name currentMicroWorld currentWorld worlds doCaching))
 
 ;; a micro world: containing all classes in it
-(define-type MicroWorld Object (name groups classes instances typeQualifications))
+(define-type MicroWorld Object (name classes instances typeQualifications))
 
 ;; a class in some micro world: containing property names and all instances
-(define-type MicroWorldClass Object (name className microWorld propertyNames groups actions goals instances))
+(define-type MicroWorldClass Object (name className microWorld propertyNames actions goals instances))
 
 ;; an object belonging to a class in some micro world: containing a reference to its class
 (define-type MicroWorldObject Object (name class))
-
-;; group of classes
-(define-type MicroWorldClassGroup MicroWorldObject (members))
 
 ;; a world (situation) at time t is a dictionary that maps an instance name to a dictionary
 ;; that maps a property name to a property value
@@ -984,9 +981,7 @@
 	     ;; instantiate a new MicroWorld
 	     [newMicroWorld name: newMicroWorldName]
 	     (let ((tmp [IdentityDictionary new]))
-	       [tmp at: 'classes put: [IdentityDictionary new]]
-	       [tmp at: 'groups put: [IdentityDictionary new]]
-	       [newMicroWorld groups: tmp])
+	       [tmp at: 'classes put: [IdentityDictionary new]])
 	     [newMicroWorld classes: classes]
 	     [newMicroWorld instances: [IdentityDictionary new]]
 	     [newMicroWorld typeQualifications: [IdentityDictionary new]]
@@ -1002,13 +997,6 @@
 	     (if [classes includesKey: className]
 	     	 [classes at: className]
 		 john-nil)))
-
-;; gets the class group of the current microworld from groupName
-(define [KnowledgeBase getGroup: groupName]
-	(let ((groups [[[[self workingMemory] currentMicroWorld] groups] at: 'groups]))
-	  (if [groups includesKey: groupName]
-	      [groups at: groupName]
-	      john-nil)))
 
 ;; gets the class of the current microworld from className
 (define [KnowledgeBase getObject: intanceName]
@@ -1031,10 +1019,8 @@
 
 (define [MicroWorld all: className getNames: getNames]
   (let ((mw [johnCurrently currentMicroWorld])
-	(classOrGroup (if [[mw classes] includesKey: className] 
-			  [[mw classes] at: className]
-			  [[[mw groups] at: 'groups] at: className])))
-    (if getNames [classOrGroup allObjNames] [classOrGroup all])))
+	(class [[mw classes] at: className])) 
+    (if getNames [class allObjNames] [class all])))
 
 (define [MicroWorld allInstances]
 	[[[self classes] values] applyMsgsAndAppend: [Array with: 'all]])
@@ -1328,15 +1314,12 @@
 ;; also defines how its objects are constructed, how their properties are stored, and looked up...
 (syntax create-class
 	(lambda (node compiler)
-	  (let ((name [node second])
-		(propertyTypes [[node third] applyMsgsAndMap: [Array with: 'first]])
-		(propertyNames [[node third] applyMsgsAndMap: [Array with: 'second]])
+	  (let ((name [node second]) (super [node third]) (props [node fourth])
+		(propertyTypes [props applyMsgsAndMap: [Array with: 'first]])
+		(propertyNames [props applyMsgsAndMap: [Array with: 'second]])
 		(newMicroWorldClass [MicroWorldClass new])
 		(mw [johnCurrently currentMicroWorld])
-		(parentClass (if [[[mw groups] at: 'classes] includesKey: name]
-				 ;; for now single p
-				 [[[[[mw groups] at: 'classes] at: name] keys] first]
-				 'MicroWorldObject))
+		(parentClass (if (== '0 super) 'MicroWorldObject super))
 		;; stores each propertyname/value pair for the object
 		(storeAndLookupDef
 		 (let ((e1 `(let () 0)) (e2 `(let () 0)) (i '0)) 
@@ -1405,55 +1388,38 @@
 	    `(begin 
 	       ;; defining the class:
 	       (define-type ,name ,parentClass ( name ))
-	       (define-send 'group ,name ,parentClass)
-	       ;; defining the constructor for the class:
-	       (define-send 'withNameAndProperties: ,name theName ,@propertyNames
-		 (let ((newObjVar [self new]) (i '0) 
-		       (propNameToValDict [IdentityDictionary new])
-		       (wm johnCurrently)
-		       (instPropNameValDict 
-			[[wm currentWorld] 
-			 instancePropertyValues]))
-		   [newObjVar class: ',newMicroWorldClass]
-		   [[[newObjVar class] instances] at: theName put: newObjVar]
-		   [[[wm currentMicroWorld] instances] at: theName put: newObjVar]
-		   [newObjVar name: theName]
-		   ,storeDef
-		   [instPropNameValDict at: theName put: propNameToValDict]
-		   newObjVar))
-	       ;; (define-send <prop name> <class name> [ lookup in the current world... ])
-	       ,lookupDef			   
-	       ;; instantiate a new MicroWorldClass for this micro world
-	       [',newMicroWorldClass name: ,name]
-	       [',newMicroWorldClass microWorld: ',mw]
-	       [',newMicroWorldClass propertyNames: ',propertyNames]
-	       [',newMicroWorldClass actions: [IdentityDictionary new]]
-	       [',newMicroWorldClass goals: [IdentityDictionary new]]
-	       [',newMicroWorldClass instances: [IdentityDictionary new]]
-	       [[',mw classes] at: ',name put: ',newMicroWorldClass]
+	       (define-send 'super ,name ,parentClass)
+	       ;; only define extra stuff if the new class is not a subtype of a primitive type
+	       (if (and ,super (not [[',mw classes] includesKey: ',name]))
+		   [[',mw classes] at: ',name put: ,name]
+		   (let ()
+		     ;; defining the constructor for the class:
+		     (define-send 'withNameAndProperties: ,name theName ,@propertyNames
+		       (let ((newObjVar [self new]) (i '0) 
+			     (propNameToValDict [IdentityDictionary new])
+			     (wm johnCurrently)
+			     (instPropNameValDict 
+			      [[wm currentWorld] 
+			       instancePropertyValues]))
+			 [newObjVar class: ',newMicroWorldClass]
+			 [[[newObjVar class] instances] at: theName put: newObjVar]
+			 [[[wm currentMicroWorld] instances] at: theName put: newObjVar]
+			 [newObjVar name: theName]
+			 ,storeDef
+			 [instPropNameValDict at: theName put: propNameToValDict]
+			 newObjVar))
+		     ;; (define-send <prop name> <class name> [ lookup in the current world... ])
+		     ,lookupDef			   
+		     ;; instantiate a new MicroWorldClass for this micro world
+		     [',newMicroWorldClass name: ,name]
+		     [',newMicroWorldClass microWorld: ',mw]
+		     [',newMicroWorldClass propertyNames: ',propertyNames]
+		     [',newMicroWorldClass actions: [IdentityDictionary new]]
+		     [',newMicroWorldClass goals: [IdentityDictionary new]]
+		     [',newMicroWorldClass instances: [IdentityDictionary new]]
+		     [[',mw classes] at: ',name put: ',newMicroWorldClass]
+		     ))
 	       john-ok))))
-
-;; grouping of classes (super class)
-(syntax create-group
-	(lambda (node compiler)
-	  (let ((groupName [node second]) (memberClasses [node third])
-		(mw [johnCurrently currentMicroWorld])
-		(newMicroWorldClassGroup [MicroWorldClassGroup new])
-	        (grpsDic [[mw groups] at: 'groups])
-		(classesDic [[mw groups] at: 'classes]))
-	  `(begin
-	     [',newMicroWorldClassGroup name: ',groupName]
-	     [',newMicroWorldClassGroup members: [IdentityDictionary new]]
-	     [',memberClasses 
-	       doFn: (lambda (className args) 
-		       (let ()
-			 (if (not [[args at: '0] includesKey: className])
-			     [[args at: '0] at: className put: [IdentityDictionary new]])
-			 [[[args at: '0] at: className] at: [args at: '1] put: [args at: '2]]))
-	       args: [Array with: ',classesDic with: ',groupName with: ',newMicroWorldClassGroup]]
-	     [',grpsDic at: ',groupName put: ',newMicroWorldClassGroup]
-	     (define-type ,groupName MicroWorldClassGroup ( name members ))
-	     john-ok))))
 
 ;; adds a new instance of a class
 (syntax make-object
@@ -1917,11 +1883,10 @@
 	(lambda (node compiler)
 	  (let ((lower [node third]) (upper [node fourth]) (diff [[upper - lower] + '1])
 		(list [List withAll: [lower to: upper]]))
-		`(let () 
-		   (define-send 'all ,[node second] ',list)
-		   (if (< [[solverInfo at: 'bounds] at: 'Integer] ',diff)
-		       [[solverInfo at: 'bounds] at: 'Integer put: ',diff])
-		   john-ok))))
+	    `(let ((type ',[node second])) 
+	       (define-send 'all ,[node second] ',list)
+	       [[solverInfo at: 'bounds] at: type put: ',diff]
+	       john-ok))))
 
 ;; changes interpreter default settings
 (syntax set-opt
@@ -1982,7 +1947,7 @@
 	(while [j < kss]
 	       (let ((varN [ks at: j]) (var [vars at: varN]) (fullTp [var third]) 
 		     (tp [fullTp first]))
-		 (if (== [fullTp last] 'Integer)
+		 (if [[classes at: [fullTp last]] isNumber]
 		     (let ((val (send [var second] [var first] 0)) (itm 0))
 		       (if (== tp 'List) ;; fixme
 			   (let () 
@@ -2347,9 +2312,9 @@ setKeyword         = 'Set' endword
 type		   = (booleanKeyword | numberKeyword | wordKeyword | 
                       listKeyword | setKeyword | sentenceKeyword)->0 
 		          <- [self @ '0]
-fullType           = type
+fullType           = variable
                           <- [Array with: result with: [Array with: result]]
-                   | number->0 type->1 'List' endword
+                   | number->0 variable->1 'List' endword
 		          <- (let ()
                                 (if (< [[solverInfo at: 'bounds] at: 'Integer] [self @ '0])
                                     [[solverInfo at: 'bounds] at: 'Integer put: [self @ '0]])
@@ -2475,8 +2440,8 @@ setOfObjects        = all propertyValNamePairs->1 variable->0
 		          <- `(filter-collection-by ,[self @ '0] ,[self @ '1])
 	           | number->0 spaces random (numberKeyword->1 <- '2->2 | variableName->1 <- '1-> 2 | expr->1 <- '0-> 2)
 		     	  <- `(select-from-collection-by-random ',[self @ '0] ,[self @ '1] ,[self @ '2])
-setOfObjectsCompiled = all numberKeyword 
-                          <- `['u , [[solverInfo at: 'bounds] at: 'Integer]]
+setOfObjectsCompiled = all variable->0
+                          <- `['u , [[solverInfo at: 'bounds] at: ',[self @ '0]]]
                    | all propertyValNamePairsCompiled->1 variable->0
 		          <- `(filter-object-list-compiled ,[self @ '0] ,[self @ '1])
 		   | select exprCompiled->0 by clausesCompiled->1
@@ -2664,13 +2629,11 @@ startWorld         = 'start-world' endword name->0
                           <- `(start-world ,[self @ '0])
 contWorld          = 'continue-world' endword name->0
                           <- `(cont-world ,[self @ '0])
-createClass        = 'class' endword variable->0 (colon
-                          (((fullType|variable)->2 | '') name->3 ( comma | spaces )
-		     	      <- [Array with: [self @ '2] with: [self @ '3]])*->1 
-                               | '' <- '()->1)
-                                   <- `(create-class ,[self @ '0] ,[self @ '1])
-groupClasses       = 'group' endword variable->0 variable->1 variable+->2
-                          <- `(create-group ,[self @ '0] ,[OrderedCollection with: [self @ '1] withAll: [self @ '2]])
+createClass        = 'class' endword variable->0 (of variable->1 | '' <- '0->1) (colon
+                          ((fullType->3 | '') name->4 ( comma | spaces )
+		     	      <- [Array with: [self @ '3] with: [self @ '4]])*->2 
+                               | '' <- [OrderedCollection new]->2)
+                                   <- `(create-class ,[self @ '0] ,[self @ '1] ,[self @ '2])
 makeObj            = 'make' endword variable->0 variableExp->1 unaryPrimitive*->2
                           <- `(make-object ,[self @ '0] ,[self @ '1] ,[self @ '2])
 actionDef          = 'action' endword name->0 name->1 classAndVariable*->2 consequence assignments->3
@@ -2707,7 +2670,7 @@ setOpt             = 'set-opt' endword name->0 primitiveValue->1
 		          <- `(set-opt ,[self @ '0] ,[self @ '1]) 
 higherOrderCmd     = for every->0 variable->3 in expr->1 do (makeObj | drawObj | query)->2
                           <- `(for-loop ',[self @ '0] ,[self @ '1] ,[self @ '2] ,[self @ '3])
-sentence           = ( startWorld | contWorld | createClass | groupClasses 
+sentence           = ( startWorld | contWorld | createClass 
                        | makeObj | actionDef | actionRule | goalDef2
 		       | goalHeuristic | goalOptimization | goalSatOptimization 
                        | actionOptimization | qualify2

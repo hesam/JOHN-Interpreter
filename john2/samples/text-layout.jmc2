@@ -1,51 +1,66 @@
 { john-program }
 
-bound Integer [0,32].
+class Integer20 of Integer.
+class Integer7 of Integer.
+bound Integer [0,128]. ;32].
+bound Integer20 [0,20].
+bound Integer7 [0,7].
 
 ;; MEANING ;;;;;;;;;;;;; 
-class TextBox: Integer width, 20 Word List words, 20 Integer List wordLs, 7 Integer List lineBreaks.
+class TextBox: Integer width, 20 Word List words, 20 Integer List wordLengths, 20 Integer7 List wordSpaces, 7 Integer20 List lineBreaks.
 qualify List butLastIndices its indices - its lastIndex.
 qualify List sorted if for all I in its butLastIndices | it at: I <= it at: (I + 1).
-qualify List elementsUnique if for all E in all Integer | it count: E <= 1.
-qualify List length its sum + its size - 1.
-qualify TextBox lineAt: I its wordLs from: (its lineBreaks at: I) 
-			               to: (its lineBreaks at: (I+1) - 1).
-qualify TextBox	wordNextLineLength: I its wordLs at: (its lineBreaks at: (I+1)).
-qualify TextBox optimallyLaidoutAt: I if (I = its lineBreaks size - 2) or 
-                ((its width - (its lineAt: I) length) <= (its wordNextLineLength: I)).
+qualify List elementsUnique if for all E in all Integer20 | it count: E <= 1.
+qualify TextBox lineAt: I (its wordLengths from: (its lineBreaks at: I) 
+			               to: (its lineBreaks at: (I+1) - 1)) +
+	                  (its wordSpaces from: (its lineBreaks at: I) 
+			               to: (its lineBreaks at: (I+1) - 1)).
+qualify TextBox	wordNextLineLength: I its wordLengths at: (its lineBreaks at: (I+1)).
 qualify TextBox laidout if its lineBreaks size > 0 and
                            its lineBreaks first = 0 and
-			   its lineBreaks last = its wordLs size and
+			   its lineBreaks last = its wordLengths size and
 			   (its lineBreaks elementsUnique) and
 			   (its lineBreaks sorted) and
 			   (for all I in its lineBreaks butLastIndices | 
-			        (((its lineAt: I) length <= its width) and 
-			        (its optimallyLaidoutAt: I))).
+			        (((its lineAt: I) sum <= its width))).
 			   
 goal TextBox layout it laidout.
 
 ;; OPTIMIZATIONS ;;;;;;;
 
 ;; VISUALS ;;;;;;;;;;;;;
-qualify TextBox spacingAt: I "\n" if (I+1) in its lineBreaks and not I+1 = its words size, " ".
-visual TextBox draw ("." * 20) "\n" and 
+qualify TextBox spacingAt: I "\n" if (I+1) in its lineBreaks and not I+1 = its words size, 
+                             " " * (its wordSpaces at: I) if I < its wordSpaces size, " ".
+			     visual TextBox draw ("." * 20) "\n" and 
                for all W in its words do draw W (its spacingAt: Index) and 
 	       draw "\n" ("." * 20).
 
 ;; TEST ;;;;;;;;;;;;;;;;
-make TextBox Text 20 [this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled] [] [].
-Text wordLs := Text words sizes.
+make TextBox Text 20 [this, is, one, too, simplistic, text, box, for, sure, but, there, is, thisverygig-, anticword, here, that, needs, to, be, handled] [] [] [].
+Text wordLengths := Text words sizes.
 ;Text solve layout.
 ;Text lineBreaks.
 ;draw Text.
 /;
 
-this is one too 
-simplistic text box 
-for sure but there 
-is thisverygig- 
-anticword here that 
-needs to be handled 
+....................
+this is one too     .
+simplistic text box .
+for sure but there  .
+is thisverygig-     .
+anticword here that .
+needs to be handled .
+....................
+
+01234567890123456789
+....................
+this   is   one  too.
+simplistic  text box.
+for sure  but  there.
+is      thisverygig-.
+anticword  here that.
+needs to  be handled.
+....................
 
 4 2 3 3
 10 4 3
