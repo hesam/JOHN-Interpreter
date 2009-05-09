@@ -10,7 +10,7 @@ goal AList sort it sorted.
 
 ;; TEST ;;;
 make AList L1 [7,10,2,4,3,9,3,8,13,5,20,18,9,20,1,10,5,7,12,2,8,5,19,15,5,4,13,11,4,17] [].
-;L1 solve sort.
+L1 solve sort.
 
 
 /;

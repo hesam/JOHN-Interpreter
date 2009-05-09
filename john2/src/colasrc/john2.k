@@ -1881,11 +1881,11 @@
 
 (syntax set-bounds
 	(lambda (node compiler)
-	  (let ((lower [node third]) (upper [node fourth]) (diff [[upper - lower] + '1])
+	  (let ((lower [node third]) (upper [node fourth]) 
 		(list [List withAll: [lower to: upper]]))
 	    `(let ((type ',[node second])) 
 	       (define-send 'all ,[node second] ',list)
-	       [[solverInfo at: 'bounds] at: type put: ',diff]
+	       [[solverInfo at: 'bounds] at: type put: '(,lower ,upper)]
 	       john-ok))))
 
 ;; changes interpreter default settings
@@ -1899,9 +1899,17 @@
 		   [twoPlayerGameOpps at: [two name] put: one]))
 	     [john-opts at: ',[node second] put: ,[node third]] john-ok)))
 
+(define translate-list-range
+  (lambda (type)
+    (let ((bounds [[solverInfo at: 'bounds] at: type]) 
+	  (lower [bounds first]) (upper [bounds second])
+	  (diff [[upper - lower] + '1])
+	  (upperCompiled (if (== '0 lower) ['u , diff] [[['u , diff] , '@] , lower])))
+      upperCompiled)))
+    
 (define translate-list-bounds 
   (lambda (size type)
-    [Array with: ['u , size] with: ['u , [[solverInfo at: 'bounds] at: type]]]))
+    [Array with: ['u , size] with: (translate-list-range type)]))
 
 (define translate-oop-val-to-solver-val
   (lambda (val)
@@ -1917,7 +1925,8 @@
     (let ((classes [[johnCurrently currentMicroWorld] classes]) (objName [obj name])
 	  (oopta [solverInfo at: 'oopta]) (atoop [solverInfo at: 'atoop])
 	  (unknowns [IdentityDictionary new])
-	  (intB [[solverInfo at: 'bounds] at: 'Integer]) (i '0) (atomN '0) (relN '0) 
+	  (intB [[[[solverInfo at: 'bounds] at: 'Integer] second] + '1]) 
+	  (i '0) (atomN '0) (relN '0) 
 	  (varTypes [solverInfo at: 'varTypes]) (varTypesK [varTypes keys])
 	  (intBStr '"int_bounds: [") (knownsBStr '"") (unknownsBStr '"") 
 	  (functionsBStr '"solve ")
@@ -1941,6 +1950,7 @@
 			  (if [atomN < intB] (set intBStr [intBStr , '", "]) 
 			      (set intBStr [intBStr , '"]"]))))))
 	     (set i [i + '1]))
+      [solverInfo println]
       ;; a. fix known vars bounds and b. specify unknown vars bounds 
       (let ((vars [solverInfo at: 'vars]) (ks [vars keys]) (kss [ks size]) (j '0))
 	[vars println]
@@ -1984,7 +1994,7 @@
 	  (knownsBStr [solverInfo at: 'knownsBStr])
 	  (asm [['"solver: \"" , [solverInfo at: 'solver]] , 
 		'"\"\nsymmetry_breaking: 3\nflatten: false\n"]))      
-      (set asm [asm , [['"bit_width: " , [[[[solverInfo at: 'bounds] at: 'Integer]
+      (set asm [asm , [['"bit_width: " , [[[[[[solverInfo at: 'bounds] at: 'Integer] second] + '1]
 					   ceilLogn: '2] asString]] , '"\n"]])
       (set asm [asm , [['"univ: u" , [atomN asString]] , '"\n"]])
       (set asm [asm , knownsBStr])
@@ -2119,10 +2129,6 @@
 (define [List compiled_range]
   [Compiled_Set withSymbol: 'u20])
 
-(define [Symbol compiledList]
-  (let ((var [[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]]))
-    (send [var second] [var first] 0)))
-
 (define [Object compiled_size]
   [Compiled_Set with: [['"#(" , [self toString]] , '")"]])
 
@@ -2154,13 +2160,17 @@
 		      [[self compiled_range] string]] , '" & "] , [self toString]])]))
 
 (define [Object compiled_sum]
-  (let ((bound [[[solverInfo at: 'bounds] at: 'Integer] - '1]) (i '1) (exp '"( ")
+  (let ((bound [[[solverInfo at: 'bounds] at: 'Integer] second]) (i '1) (exp '"( ")
 	(part [['"#(" , [self toString]] , '".A"]))
     (while [i < bound]
 	   (set exp [exp , [[[part , [i compiled_sumValue]] , ['")*" , [i compiled_sumValue]]] , '+]])
 	   (set i [i + '1]))
     (set exp [exp , [[[part , [bound asString]] , ['")*" , [bound asString]]] , '" )"]])
       [Compiled_Set with: exp]))
+
+(define [Symbol compiledList]
+  (let ((var [[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]]))
+    (send [var second] [var first] 0)))
     
 (define [Symbol compiledList_size]
   [[[[solverInfo at: 'vars] at: [[solverInfo at: 'atoop] at: self]] at: '2] at: '1])
@@ -2177,6 +2187,9 @@
 (define [Symbol compiled_indices]
   [Compiled_Set withSymbol: ['u , [self compiledList_size]]])
 
+(define [Compiled_Set compiled_indices]
+  [Compiled_Set with: (make-string-3 0 '" .. " [self compiled_size])])
+
 (define [Object compiled_count: itm]
   [Compiled_Set with: [[[['"#(" , [self toString]] , '"."] , itm] , '")"]])
 
@@ -2188,13 +2201,13 @@
     [solverInfo at: 'setNum put: [setNum + '1]]
     [Compiled_Set with:  
 		  (make-string-w-parens
-		   [[[[[[[[[[['"({ [ " , setVar] , '": one "] , [[[self compiledList] compiled_indices] string]] , [['" ] | sum(" , setVar] , '") >= "]] ,
+		   [[[[[[[[[[['"({ [ " , setVar] , '": one "] , [[self compiled_indices] string]] , [['" ] | sum(" , setVar] , '") >= "]] ,
 			  [i compiled_sumValue]] , [['" && sum(" , setVar] , '") <= "]] , [j compiled_sumValue]] , '" })->"] , 
 		      [[[self compiledList] compiled_range] string]] , '" & "] , [self toString]])]))
 
 (define [Integer compiled_to: j]
   (let ((setNum [solverInfo at: 'setNum]) (setVar ['S , setNum])
-	(intB [[solverInfo at: 'bounds] at: 'Integer]) (intBVar ['u , intB]))
+	(intB [[[[solverInfo at: 'bounds] at: 'Integer] second] + '1]) (intBVar ['u , intB]))
     [solverInfo at: 'setNum put: [setNum + '1]]
     [Compiled_Set with:   
 		  (make-string-w-parens
@@ -2207,8 +2220,6 @@
 (define [Compiled_Set mathOp: op on: other]
   [Compiled_Set with: (make-string-3-w-parens [self compiled_sumValue] op other)])
 
-(define [Compiled_Set compiled_indices]
-  [Compiled_Set with: (make-string-3 0 '" .. " [self compiled_size])])
 
 
 
@@ -2316,8 +2327,8 @@ fullType           = variable
                           <- [Array with: result with: [Array with: result]]
                    | number->0 variable->1 'List' endword
 		          <- (let ()
-                                (if (< [[solverInfo at: 'bounds] at: 'Integer] [self @ '0])
-                                    [[solverInfo at: 'bounds] at: 'Integer put: [self @ '0]])
+                                (if (< [[[solverInfo at: 'bounds] at: 'Integer] second] [self @ '0])
+                                    [[[solverInfo at: 'bounds] at: 'Integer] at: '1 put: [self @ '0]])
                                 [Array with: [['List , [self @ '0]] , [self @ '1]]
                                        with: [Array with: 'List with: [self @ '0] with: [self @ '1]]])
 true	     	   = 'yes' endword
@@ -2441,7 +2452,7 @@ setOfObjects        = all propertyValNamePairs->1 variable->0
 	           | number->0 spaces random (numberKeyword->1 <- '2->2 | variableName->1 <- '1-> 2 | expr->1 <- '0-> 2)
 		     	  <- `(select-from-collection-by-random ',[self @ '0] ,[self @ '1] ,[self @ '2])
 setOfObjectsCompiled = all variable->0
-                          <- `['u , [[solverInfo at: 'bounds] at: ',[self @ '0]]]
+                          <- `(translate-list-range ',[self @ '0])
                    | all propertyValNamePairsCompiled->1 variable->0
 		          <- `(filter-object-list-compiled ,[self @ '0] ,[self @ '1])
 		   | select exprCompiled->0 by clausesCompiled->1
